@@ -6,7 +6,7 @@
    The old version was cache-first for everything, which meant a new app.js
    sat unused until the second reload. */
 /* keep in step with APP_VERSION in app.js */
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.3.1';
 const CACHE = 'hbt-' + APP_VERSION;
 const SHELL = [
   './', './index.html', './app.js', './app.js?v=' + APP_VERSION, './manual.html',

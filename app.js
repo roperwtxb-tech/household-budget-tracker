@@ -7,7 +7,7 @@
    the cache name, so a new version can never be served from a stale cache —
    GitHub Pages sits behind a CDN that holds files for several minutes, and a
    changed URL is the only thing that reliably gets past it. */
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.3.1';
 
 const CFG = {
   url: 'https://hrtuhexblsbdjfdbfblg.supabase.co',
@@ -765,10 +765,11 @@ function confirmDelete(what, fn) {
 /* =====================================================================
    Entity editors
    ===================================================================== */
-function editAccount(a) {
+function editAccount(a, defaultType) {
   const isNew = !a;
-  a = a || { name: '', type: 'checking', balance: 0, include_in_net_worth: true };
-  openSheet(isNew ? 'New account' : 'Edit account', b => {
+  a = a || { name: '', type: defaultType || 'checking', balance: 0, include_in_net_worth: true };
+  const newTitle = defaultType === 'credit' ? 'New card or loan' : 'New account';
+  openSheet(isNew ? newTitle : 'Edit account', b => {
     const name = field(b, 'Account name', inp('text', a.name, { placeholder: 'e.g. Primary Checking' }));
     const type = field(b, 'Type', sel(ACCOUNT_TYPES.map(t => ({ v: t.v, l: t.l })), a.type));
     const bal = field(b, 'Current balance', money_(a.balance));
@@ -1314,7 +1315,8 @@ function viewDashboard(app) {
   })));
   app.appendChild(gc);
 
-  const dc = sectionCard('Debt payoff', 'Manage →', () => go('accounts'));
+  const dc = sectionCard('Debt payoff', debts.length ? 'Manage →' : '+ Add a card or loan',
+    () => (debts.length ? go('accounts') : editAccount(null, 'credit')));
   if (!debts.length) dc.appendChild(emptyNote('No debt balances tracked. 🎉'));
   else {
     /* how much debt has come down since the earliest snapshot */
@@ -1495,12 +1497,14 @@ function viewAccounts(app) {
   app.appendChild(tb);
 
   const ac = sectionCard('Accounts', '+ New account', () => editAccount(null));
+  ac.appendChild(el('div', { class: 'sub', style: 'margin:-4px 0 6px' },
+    'Checking, savings, cash and investments. Cards and loans live under Debt payoff below.'));
   if (!assets.length) ac.appendChild(emptyNote('No accounts yet.'));
   assets.forEach(a => ac.appendChild(accountRow(a)));
   app.appendChild(ac);
 
-  const dc = sectionCard('Debt payoff', null);
-  if (!debts.length) dc.appendChild(emptyNote('No credit cards or loans tracked.'));
+  const dc = sectionCard('Debt payoff', '+ New card or loan', () => editAccount(null, 'credit'));
+  if (!debts.length) dc.appendChild(emptyNote('No credit cards or loans tracked. Add one with “+ New card or loan” above.'));
   debts.forEach(a => {  // eslint-disable-line
     const bal = Math.abs(num(a.balance));
     const months = payoffMonths(bal, a.interest_rate, a.minimum_payment);
