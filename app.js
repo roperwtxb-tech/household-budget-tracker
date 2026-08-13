@@ -1839,6 +1839,11 @@ function viewMore(app) {
     r.onclick = () => go(v);
     c.appendChild(r);
   });
+  /* the manual — a plain page, not an app view */
+  const help = el('a', { class: 'row rowbtn', href: 'manual.html', style: 'text-decoration:none;color:inherit' });
+  help.innerHTML = `<div style="font-size:22px;width:32px;text-align:center">📖</div>
+    <div class="main"><div class="t">How to use this app</div><div class="s">The manual — what every screen does</div></div><span class="chev">›</span>`;
+  c.appendChild(help);
   app.appendChild(c);
 
   const bc = sectionCard('Backup & export', null);

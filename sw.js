@@ -1,7 +1,7 @@
 /* Household Budget Tracker service worker — app shell cache, network for data */
-const CACHE = 'hbt-v1-0-0';
+const CACHE = 'hbt-v1-1-0';
 const SHELL = [
-  './', './index.html', './app.js', './vendor/supabase.js',
+  './', './index.html', './app.js', './manual.html', './vendor/supabase.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'
 ];
 

@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>How to use the Household Budget Tracker</title>
+<meta name="theme-color" content="#8a4a1c">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<style>
+:root{
+  color-scheme: light;
+  --bg:#f7f3ec; --surface:#fffdf9; --surface-2:#f1ebe1; --surface-3:#e8e0d3;
+  --ink:#241f1a; --ink-2:#4e453b; --muted:#7d7367;
+  --line:#e3dace; --line-strong:#cfc3b1;
+  --accent:#a04a1a; --accent-ink:#fff8f2; --accent-soft:#f8ece2;
+  --olive:#5f6f34; --olive-soft:#eff2e4;
+  --critical:#a92c2c; --critical-soft:#fbeeee;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --shadow:0 1px 2px rgba(36,31,26,.06), 0 6px 18px rgba(36,31,26,.05);
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#141210; --surface:#1c1a17; --surface-2:#252220; --surface-3:#312d29;
+  --ink:#f6f1e8; --ink-2:#cdc4b6; --muted:#9a9082;
+  --line:#332f2a; --line-strong:#4a443d;
+  --accent:#dd7d40; --accent-ink:#1c1a17; --accent-soft:#2c211a;
+  --olive:#a3b85c; --olive-soft:#20240f;
+  --critical:#e66767; --critical-soft:#2b1a1a;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.3);
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-behavior:smooth; scroll-padding-top:70px}
+body{
+  margin:0; background:var(--bg); color:var(--ink); font-family:var(--font);
+  font-size:16.5px; line-height:1.62; -webkit-text-size-adjust:100%;
+}
+.wrap{max-width:760px; margin:0 auto; padding:0 18px 80px}
+
+/* header */
+.top{
+  position:sticky; top:0; z-index:20; background:color-mix(in srgb,var(--bg) 90%,transparent);
+  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line); padding:calc(10px + env(safe-area-inset-top)) 0 10px;
+}
+.top-in{max-width:760px;margin:0 auto;padding:0 18px;display:flex;align-items:center;gap:12px}
+.top a.back{
+  color:var(--accent); text-decoration:none; font-weight:600; font-size:14px;
+  border:1px solid var(--line-strong); background:var(--surface); padding:7px 12px; border-radius:10px;
+  white-space:nowrap;
+}
+.top .ttl{flex:1;font-weight:650;font-size:15px;letter-spacing:-.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.top button{
+  border:1px solid var(--line-strong); background:var(--surface); color:var(--ink-2);
+  width:36px;height:36px;border-radius:10px;font-size:16px;cursor:pointer;flex:0 0 auto;
+}
+
+/* hero */
+.hero{padding:34px 0 8px}
+.hero h1{font-size:30px;line-height:1.18;letter-spacing:-.025em;margin:0 0 8px;font-weight:700}
+.hero p{color:var(--ink-2);font-size:17px;margin:0}
+
+/* structure */
+h2{
+  font-size:22px; letter-spacing:-.02em; margin:44px 0 6px; padding-top:18px;
+  border-top:2px solid var(--line); font-weight:680;
+}
+h2:first-of-type{border-top:0;padding-top:0}
+h3{font-size:17.5px;margin:26px 0 6px;letter-spacing:-.01em;font-weight:650}
+h4{font-size:15.5px;margin:18px 0 4px;color:var(--ink-2);font-weight:650}
+p{margin:10px 0}
+ul,ol{margin:10px 0;padding-left:22px}
+li{margin:6px 0}
+li::marker{color:var(--muted)}
+strong{font-weight:650}
+code{
+  background:var(--surface-2); border:1px solid var(--line); border-radius:5px;
+  padding:1px 5px; font-size:.87em; font-family:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+a{color:var(--accent)}
+
+/* toc */
+.toc{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:26px 0 8px;box-shadow:var(--shadow)}
+.toc h2{font-size:13px;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);border:0;margin:0 0 10px;padding:0}
+.toc ol{margin:0;padding-left:20px;columns:2;column-gap:26px}
+.toc li{margin:4px 0;break-inside:avoid}
+.toc a{text-decoration:none;font-size:14.5px}
+.toc a:hover{text-decoration:underline}
+@media(max-width:560px){.toc ol{columns:1}}
+
+/* callouts */
+.note,.warn,.tip{
+  border-radius:12px; padding:13px 16px; margin:18px 0; font-size:15.5px;
+  border:1px solid var(--line); background:var(--surface);
+}
+.note{background:var(--accent-soft);border-color:color-mix(in srgb,var(--accent) 25%,transparent)}
+.warn{background:var(--critical-soft);border-color:color-mix(in srgb,var(--critical) 30%,transparent)}
+.tip{background:var(--olive-soft);border-color:color-mix(in srgb,var(--olive) 30%,transparent)}
+.note p:first-child,.warn p:first-child,.tip p:first-child{margin-top:0}
+.note p:last-child,.warn p:last-child,.tip p:last-child{margin-bottom:0}
+.lab{display:block;font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.07em;margin-bottom:4px}
+.note .lab{color:var(--accent)} .warn .lab{color:var(--critical)} .tip .lab{color:var(--olive)}
+
+/* tables */
+table{width:100%;border-collapse:collapse;margin:16px 0;font-size:15px}
+th,td{text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:650}
+tr:last-child td{border-bottom:0}
+td:first-child{font-weight:600;white-space:nowrap}
+@media(max-width:520px){td:first-child{white-space:normal}}
+
+/* step list */
+.steps{counter-reset:s;list-style:none;padding:0;margin:16px 0}
+.steps li{counter-increment:s;position:relative;padding-left:40px;margin:14px 0}
+.steps li::before{
+  content:counter(s); position:absolute; left:0; top:1px;
+  width:26px;height:26px;border-radius:50%;background:var(--accent);color:var(--accent-ink);
+  display:grid;place-items:center;font-size:13px;font-weight:700;
+}
+.steps li b{display:block}
+
+/* button/pill inline references */
+.ui{
+  display:inline-block; background:var(--surface-2); border:1px solid var(--line-strong);
+  border-radius:7px; padding:1px 7px; font-size:.9em; font-weight:600; white-space:nowrap;
+}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin:18px 0;box-shadow:var(--shadow)}
+.card h3{margin-top:0}
+hr{border:0;border-top:1px solid var(--line);margin:30px 0}
+.foot{margin-top:50px;padding-top:20px;border-top:1px solid var(--line);color:var(--muted);font-size:14px;text-align:center}
+.big{font-size:19px;font-weight:650;letter-spacing:-.01em}
+
+/* print / PDF */
+@media print{
+  :root{--bg:#fff;--surface:#fff;--surface-2:#f4f1eb;--surface-3:#eee;--ink:#000;--ink-2:#333;
+        --muted:#666;--line:#ccc;--line-strong:#bbb;--shadow:none}
+  body{font-size:10.5pt;line-height:1.5}
+  .wrap{max-width:none;padding:0}
+  .top,.toc,.no-print{display:none !important}
+  .hero{padding:0 0 6px}
+  .hero h1{font-size:22pt}
+  h2{font-size:14pt;margin:20pt 0 4pt;padding-top:10pt;break-after:avoid;break-inside:avoid}
+  h3{font-size:11.5pt;margin:13pt 0 3pt;break-after:avoid}
+  h4{font-size:10.5pt;break-after:avoid}
+  p,li{orphans:3;widows:3}
+  table,.note,.warn,.tip,.card,.steps li{break-inside:avoid}
+  .note,.warn,.tip,.card{box-shadow:none}
+  a{color:#000;text-decoration:none}
+  @page{margin:16mm 15mm}
+}
+</style>
+</head>
+<body>
+
+<div class="top no-print">
+  <div class="top-in">
+    <a class="back" href="index.html">‹ Back</a>
+    <span class="ttl">Manual</span>
+    <button id="themeBtn" title="Light / dark" aria-label="Toggle light or dark">◐</button>
+  </div>
+</div>
+
+<div class="wrap">
+
+<div class="hero">
+  <h1>Household Budget Tracker</h1>
+  <p>How it works, what each screen does, and how to run it week to week. Written for both of us — Sean &amp; Jessica.</p>
+</div>
+
+<nav class="toc no-print">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#start">Start here</a></li>
+    <li><a href="#setup">First-time setup</a></li>
+    <li><a href="#rhythm">The weekly rhythm</a></li>
+    <li><a href="#getting-around">Getting around</a></li>
+    <li><a href="#quickadd">Quick Add</a></li>
+    <li><a href="#dashboard">Dashboard</a></li>
+    <li><a href="#bills">Bills</a></li>
+    <li><a href="#budget">Budget</a></li>
+    <li><a href="#accounts">Accounts &amp; debt</a></li>
+    <li><a href="#income">Income</a></li>
+    <li><a href="#goals">Savings goals</a></li>
+    <li><a href="#funds">Sinking funds</a></li>
+    <li><a href="#networth">Net worth</a></li>
+    <li><a href="#trends">Spending trends</a></li>
+    <li><a href="#review">Weekly review</a></li>
+    <li><a href="#backup">Backup &amp; settings</a></li>
+    <li><a href="#rules">Rules that matter</a></li>
+    <li><a href="#trouble">When something looks wrong</a></li>
+  </ol>
+</nav>
+
+<!-- ============================================ -->
+<h2 id="start">Start here</h2>
+
+<p class="big">This app is one shared picture of our money, on both our phones at once.</p>
+
+<p>Whatever one of us types shows up on the other's phone within a second or two. There's no "my copy" and "your copy" — it's one set of numbers we both edit. If Sean marks the electric bill paid at the feed store, Jessica sees it paid before she gets home.</p>
+
+<p>It doesn't connect to any bank. Nothing is automatic. That's on purpose — we type the numbers in ourselves, which takes a few minutes a week and means we actually know what's in there.</p>
+
+<h3>Opening it</h3>
+<p>Tap the house icon on your home screen. If it asks for a password, that's the <strong>household password</strong> — same one for both of us. Tick <em>Stay signed in on this device</em> and it won't ask again on that phone.</p>
+
+<div class="note">
+  <span class="lab">The one indicator worth knowing</span>
+  <p>Under the screen title in the top-left there's a small dot. <strong>Green + "Live"</strong> means the app is connected and both phones are in sync. <strong>Red + "Offline"</strong> means it can't reach the internet — anything you type may not save. Get back on signal and it reconnects on its own.</p>
+</div>
+
+<!-- ============================================ -->
+<h2 id="setup">First-time setup</h2>
+
+<p>One-time, about twenty minutes. Do it in this order — each step makes the next screen actually useful.</p>
+
+<ol class="steps">
+  <li><b>Fix the accounts</b>
+    <span class="ui">Accounts</span> tab. Eight placeholders are waiting. Tap each one, give it the real name and today's balance. Delete any we don't have.
+    <br><em>For credit cards and loans, type what we <strong>owe</strong> as a positive number</em> — the app knows those count against us. While you're in there, add the interest rate and monthly payment if you know them; that's what produces the payoff estimates.</li>
+
+  <li><b>Set the budget</b>
+    <span class="ui">Budget</span> tab. Twenty categories are pre-made, all at $0. Tap the ones we actually use and put in a monthly amount. Hit <span class="ui">Retire</span> on the ones we don't — that hides them without deleting the history.</li>
+
+  <li><b>Add the bills</b>
+    <span class="ui">Bills</span> tab → <span class="ui">+ New bill</span>. Name, amount, when it's next due, how often it repeats, and which budget category it belongs to.
+    <br>This is the step that pays off fastest — the moment bills are in, the dashboard starts warning us before things are due.</li>
+
+  <li><b>Set the sinking funds</b>
+    <span class="ui">More</span> → <span class="ui">Sinking funds</span>. Five are pre-made. Put a monthly contribution on each one. (See <a href="#funds">Sinking funds</a> if that idea is new.)</li>
+
+  <li><b>Enter the paychecks</b>
+    <span class="ui">More</span> → <span class="ui">Income</span> → <span class="ui">+ New income</span>. Source, amount, date, and how often.</li>
+
+  <li><b>Take the first snapshot</b>
+    <span class="ui">More</span> → <span class="ui">Net worth</span> → <span class="ui">Snapshot now</span>. That plants the first dot on the trend line. It'll look like nothing until there are two or three.</li>
+</ol>
+
+<!-- ============================================ -->
+<h2 id="rhythm">The weekly rhythm</h2>
+
+<p>Once it's set up, using it looks like this:</p>
+
+<table>
+  <tr>
+    <td>As it happens</td>
+    <td>Spent money? Hit the orange <strong>+</strong> button, punch in the amount and category. Ten seconds. That's the whole habit.</td>
+  </tr>
+  <tr>
+    <td>Once a week</td>
+    <td>Open <span class="ui">Weekly review</span> together and work down the six steps. Five minutes.</td>
+  </tr>
+  <tr>
+    <td>Once a month</td>
+    <td>The dashboard prompts to add the sinking fund contributions — one tap. Glance at <span class="ui">Spending trends</span> to see where things drifted.</td>
+  </tr>
+</table>
+
+<div class="tip">
+  <span class="lab">If you only do one thing</span>
+  <p>Do the weekly review. Everything else in the app is either feeding it or reading out of it. Skip the daily logging for a week and you'll survive; skip the review for a month and the numbers stop being true.</p>
+</div>
+
+<!-- ============================================ -->
+<h2 id="getting-around">Getting around</h2>
+
+<p>Five buttons along the bottom, always there:</p>
+
+<table>
+  <tr><td>🏠 Home</td><td>The dashboard — everything at a glance</td></tr>
+  <tr><td>🧾 Bills</td><td>What's due, what's paid, and the master list</td></tr>
+  <tr><td>📋 Budget</td><td>Planned vs. actual by category, plus this month's transactions</td></tr>
+  <tr><td>🏦 Accounts</td><td>Balances and debt payoff</td></tr>
+  <tr><td>⋯ More</td><td>Everything else: income, goals, sinking funds, net worth, trends, weekly review, backup, settings</td></tr>
+</table>
+
+<p>The orange <strong>+</strong> floating button is Quick Add and follows you everywhere. Top-right, <span class="ui">◐</span> flips between light and dark, and <span class="ui">☰</span> jumps to the More menu.</p>
+
+<p>On <span class="ui">Bills</span>, <span class="ui">Budget</span> and <span class="ui">Income</span> there are <strong>‹ ›</strong> arrows at the top for moving between months. Wandered off? A <span class="ui">Back to this month</span> button appears.</p>
+
+<!-- ============================================ -->
+<h2 id="quickadd">Quick Add — the orange + button</h2>
+
+<p>Built for standing in a checkout line. Three tabs:</p>
+
+<h4>Expense</h4>
+<p>Amount, what it was for, category. Account and date are optional — date defaults to today. Tap <span class="ui">Add</span> and it's logged against that category's budget.</p>
+
+<h4>Income</h4>
+<p>Same thing for money coming in — a side job, a sale, birthday money.</p>
+
+<h4>Pay bill</h4>
+<p>A list of everything unpaid from the last 45 days and the next 30. <strong>Tap one and it's marked paid.</strong> That's it — no form.</p>
+
+<div class="warn">
+  <span class="lab">Don't do both</span>
+  <p>If you mark a bill paid here, <strong>don't also log an expense for it</strong>. The app counts both, so the same money would hit the budget twice and the category would look overspent when it isn't.</p>
+  <p>Simple rule: <strong>bills get marked paid, everything else gets logged as an expense.</strong></p>
+</div>
+
+<!-- ============================================ -->
+<h2 id="dashboard">Dashboard</h2>
+
+<p>The home screen. Top to bottom:</p>
+
+<table>
+  <tr><td>Four tiles</td><td>Cash on hand, net worth, spent this month, income this month. The small line under each gives context — how much of the plan is used, how much is left over.</td></tr>
+  <tr><td>Bills</td><td>Overdue in red first, then anything due in the next 14 days. Pay straight from here with the green <span class="ui">Pay</span> button.</td></tr>
+  <tr><td>Sinking funds prompt</td><td>Appears once a month in an orange box. One tap adds every fund's contribution.</td></tr>
+  <tr><td>Budget</td><td>Overall bar, then the five categories with the most spending. Green is fine, yellow is past 85%, red is over.</td></tr>
+  <tr><td>Net worth</td><td>The trend line. Needs two snapshots before it draws.</td></tr>
+  <tr><td>Savings goals</td><td>Progress toward each one.</td></tr>
+  <tr><td>Debt payoff</td><td>Total owed, how much has come down since the first snapshot, and each debt's estimated payoff date.</td></tr>
+  <tr><td>Sinking funds</td><td>What's set aside in each bucket.</td></tr>
+  <tr><td>Weekly review</td><td>Green button to start the sit-down.</td></tr>
+</table>
+
+<p>Every section header has a link on the right — <span class="ui">All bills →</span>, <span class="ui">Manage →</span> — that opens the full screen for it.</p>
+
+<!-- ============================================ -->
+<h2 id="bills">Bills</h2>
+
+<h3>How repeating bills work</h3>
+<p>You enter a bill <em>once</em> with how often it repeats, and the app generates every future due date from that. The electric bill isn't twelve entries — it's one entry that shows up monthly, forever.</p>
+
+<p>Marking it paid applies to <strong>that month only</strong>. Next month it comes back unpaid, as it should. Options are one-time, weekly, every 2 weeks, twice a month, monthly, quarterly, every 6 months, and yearly.</p>
+
+<h3>Paying one</h3>
+<p>Tap the green <span class="ui">Pay</span> button on that row. Marked the wrong one? <span class="ui">Undo</span> puts it back.</p>
+
+<h3>Editing a bill</h3>
+<p>Tap the bill's <em>name</em> (not the Pay button). Changing the amount here changes it for all future months.</p>
+
+<h3>Reading the tags</h3>
+<table>
+  <tr><td>🔴 Overdue</td><td>Past its due date, still unpaid</td></tr>
+  <tr><td>🟡 in 3 days</td><td>Due within a week</td></tr>
+  <tr><td>⚪ Upcoming</td><td>Due later this month</td></tr>
+  <tr><td>🟢 ✓ Paid</td><td>Done for this cycle</td></tr>
+  <tr><td><span class="ui">auto</span></td><td>Marked autopay — still needs marking paid so the budget sees it</td></tr>
+</table>
+
+<div class="note">
+  <span class="lab">About autopay</span>
+  <p>The autopay flag is just a reminder that we don't have to go pay it by hand. The app can't see our bank, so an autopay bill still has to be marked paid for the money to count against the budget. The weekly review is where that gets caught.</p>
+</div>
+
+<!-- ============================================ -->
+<h2 id="budget">Budget</h2>
+
+<p>Each category has a monthly plan. The bar fills as the money goes out — green, then yellow past 85%, then red over.</p>
+
+<h3>Where "actual" comes from</h3>
+<p>Two places, added together:</p>
+<ul>
+  <li>Expenses logged with Quick Add against that category</li>
+  <li>Bills marked paid that belong to that category</li>
+</ul>
+<p>Which is exactly why you don't want to do both for the same purchase.</p>
+
+<h3>Rollover</h3>
+<p>Switched on per category, with the <span class="ui">↻</span> symbol next to the name.</p>
+
+<p><strong>Off (the normal way):</strong> the category resets to its planned amount on the 1st. Anything unspent is gone. Right for groceries — under-spending one month doesn't earn us $200 of extra groceries in March.</p>
+
+<p><strong>On:</strong> whatever's left gets added to next month's plan. Budget $150 for home repairs and spend nothing? April has $300. Right for the categories where the whole point is building up for a big one.</p>
+
+<p>It applies by itself the first time the app is opened in a new month. There's also a manual <span class="ui">Roll leftovers in from…</span> button at the bottom of the category list.</p>
+
+<p>Currently rolling over: Home Repairs, Vehicle/Auto, Medical, Clothing, Gifts, Ranch/Livestock, Miscellaneous. Change any of them by tapping the category.</p>
+
+<h3>Categories</h3>
+<p>Add with <span class="ui">+ New category</span>, edit by tapping. You can't delete one — you <span class="ui">Retire</span> it, which hides it while keeping past months accurate. Retired ones sit at the bottom with a <span class="ui">Restore</span> button.</p>
+
+<h3>Transactions</h3>
+<p>Below the categories, everything logged this month. Tap any one to fix or delete it.</p>
+
+<!-- ============================================ -->
+<h2 id="accounts">Accounts &amp; debt</h2>
+
+<p>Two tiles at the top — what we own, what we owe. Then accounts, then debts.</p>
+
+<div class="note">
+  <span class="lab">The one rule for balances</span>
+  <p>For a credit card or loan, enter what we <strong>owe</strong> as a plain positive number. $4,800 on a card is <code>4800</code>, not <code>-4800</code>. The app already knows debts count against us; a minus sign makes it think the card owes <em>us</em> money.</p>
+</div>
+
+<h3>Debt payoff</h3>
+<p>Add an interest rate and a monthly payment to any debt and the app works out when it'll be gone and roughly how much interest we'll pay getting there. Bump the payment up and watch the date move — that's the useful part.</p>
+
+<p>If it says <em>"payment does not cover interest,"</em> that's not a bug. It means the balance is growing faster than the payment shrinks it, and that debt never gets paid off at that amount. Worth knowing plainly.</p>
+
+<h3>Account types</h3>
+<p>Checking, savings, cash, investment/retirement, and property/vehicle count as things we own. Credit card and loan count as things we owe. Property is for a house or a truck we own outright — pair it with the loan against it and net worth comes out right.</p>
+
+<!-- ============================================ -->
+<h2 id="income">Income</h2>
+
+<p><span class="ui">More</span> → <span class="ui">Income</span>. Paychecks and one-offs, with the same repeat options as bills.</p>
+
+<p>Each entry is either <strong>expected</strong> or <strong>received</strong>. Mark it received when it actually lands — step 3 of the weekly review walks through anything outstanding.</p>
+
+<!-- ============================================ -->
+<h2 id="goals">Savings goals</h2>
+
+<p>Something specific we're saving toward, with a finish line. A tractor, a trip, a new roof.</p>
+
+<p>Give it a name, target amount, what's saved already, and optionally a date. With a date set, the app shows what we'd need to put away monthly to make it — <em>"$717/mo to hit Jun 2027."</em></p>
+
+<p>Put money in with <span class="ui">+ Add money</span> on the goal.</p>
+
+<!-- ============================================ -->
+<h2 id="funds">Sinking funds</h2>
+
+<p class="big">Money set aside monthly for something that isn't monthly.</p>
+
+<p>Property taxes don't care that they're a big number. They show up once a year and wreck that month. Same with Christmas, or the vet bill that isn't routine but is inevitable. Budget month to month only, and these permanently feel like emergencies — even though not one of them is a surprise.</p>
+
+<p>So flip it. Take the yearly cost, divide by twelve, set that aside every month. When the bill comes, the money's already there.</p>
+
+<div class="card">
+  <h3>An example</h3>
+  <p>Property taxes run <strong>$3,840 a year</strong>. Instead of one brutal month, put <strong>$320</strong> aside monthly. When the bill lands, it's covered, and that month feels like any other.</p>
+</div>
+
+<h3>Fund vs. goal — what's the difference?</h3>
+<table>
+  <tr><th></th><th>Sinking fund</th><th>Savings goal</th></tr>
+  <tr><td>Shape</td><td>A cycle that repeats</td><td>A finish line you cross once</td></tr>
+  <tr><td>Example</td><td>Christmas, property taxes, vet bills</td><td>New tractor, $12,000</td></tr>
+  <tr><td>After spending it</td><td>Starts refilling for next time</td><td>Done — goal complete</td></tr>
+</table>
+<p>Rule of thumb: <em>"this happens again"</em> is a fund. <em>"We're saving up for this"</em> is a goal.</p>
+
+<h3>Using them</h3>
+<ul>
+  <li><span class="ui">+ Add</span> — put money in by hand</li>
+  <li><span class="ui">− Spend</span> — the expense hit; draw the fund down</li>
+  <li>Once a month the dashboard offers to add every fund's contribution at once</li>
+</ul>
+
+<div class="warn">
+  <span class="lab">These are labels, not accounts</span>
+  <p>The money doesn't actually move anywhere. A sinking fund is a label on money already sitting in savings. If there's $9,200 in savings and $695 across the funds, that $695 is <em>part of</em> the $9,200 — already spoken for.</p>
+  <p>So don't add a fund contribution and <em>also</em> subtract it from the savings balance, or it's counted twice. The account balance is the truth; the funds just say how much of it is claimed.</p>
+</div>
+
+<p>Picking the number: yearly cost ÷ 12 where we know it. For the fuzzy ones like car repair, guess based on a bad year and adjust once we've watched it a while.</p>
+
+<!-- ============================================ -->
+<h2 id="networth">Net worth</h2>
+
+<p>Everything we own minus everything we owe. One number for whether we're moving forward.</p>
+
+<p>It doesn't record itself — hit <span class="ui">Snapshot now</span> and it stores today's figure. Do it during the weekly review and the trend builds on its own. Two snapshots minimum before a line appears; a handful before it means anything.</p>
+
+<p>A negative number early on is normal, especially with a mortgage. <strong>The direction matters more than the number.</strong></p>
+
+<!-- ============================================ -->
+<h2 id="trends">Spending trends</h2>
+
+<p><span class="ui">More</span> → <span class="ui">Spending trends</span>. Where the money actually went, month over month.</p>
+
+<p>Stacked bars, one per month, colored by category — switch between 3, 6 and 12 months. Tap a bar for the exact breakdown. <span class="ui">Table view</span> shows the same thing as plain numbers if that reads easier.</p>
+
+<p>Underneath, the biggest movers versus last month. Green means we spent less, red means more.</p>
+
+<div class="note">
+  <span class="lab">Reading the current month</span>
+  <p>The month we're in is always partial, so its bar looks short and every category looks "down." The app says which day of the month we're on underneath. Compare finished months to finished months.</p>
+</div>
+
+<p>This is the screen that answers <em>"where is it all going?"</em> rather than <em>"did we hit the number?"</em> Give it three or four months before drawing conclusions.</p>
+
+<!-- ============================================ -->
+<h2 id="review">Weekly review</h2>
+
+<p class="big">The five minutes that keeps the rest honest.</p>
+
+<p><span class="ui">More</span> → <span class="ui">Weekly review</span>, or the green button at the bottom of the dashboard. Six steps, top to bottom:</p>
+
+<ol class="steps">
+  <li><b>Reconcile the balances</b>
+    Open the bank app and type in what each account actually says. This is the most important step in the whole app — everything else is built on these numbers being real. Hit <span class="ui">Save balances</span>.</li>
+  <li><b>Clear the week's bills</b>
+    Anything overdue or due in the next 7 days. Tap <span class="ui">Pay</span> on what's been paid — including autopay ones.</li>
+  <li><b>Confirm income</b>
+    Paychecks that landed get marked <span class="ui">Received</span>.</li>
+  <li><b>Fund the sinking funds</b>
+    Once a month it'll offer the contributions. The rest of the weeks it just says they're already in.</li>
+  <li><b>Check the budget</b>
+    Anything over gets listed. No lecture — just a heads up while there's still month left to adjust.</li>
+  <li><b>Snapshot net worth</b>
+    Shows assets, debt and the total, then <span class="ui">Save snapshot for today</span>. One tap, and the trend line grows.</li>
+</ol>
+
+<p>Pick a time and keep it. Sunday evening, coffee Saturday morning — doesn't matter which, matters that it's the same one.</p>
+
+<!-- ============================================ -->
+<h2 id="backup">Backup &amp; settings</h2>
+
+<h3>Backing up</h3>
+<p><span class="ui">More</span> → <span class="ui">Backup &amp; export</span>:</p>
+<ul>
+  <li><span class="ui">Export JSON</span> — a complete copy of everything. This is the real backup; it can be restored.</li>
+  <li><span class="ui">Export CSV</span> — for opening in Excel or Google Sheets.</li>
+  <li><span class="ui">Restore backup</span> — loads a JSON file back in.</li>
+</ul>
+<p>Worth doing every few months. Save it somewhere that isn't just the phone.</p>
+
+<h3>Settings</h3>
+<ul>
+  <li><strong>Change household password</strong> — needs the current one first. Whoever changes it has to tell the other, or they're locked out.</li>
+  <li><strong>Toggle light / dark</strong> — same as the <span class="ui">◐</span> button up top. Set per phone.</li>
+  <li><strong>Sign out on this device</strong> — only that phone. Everything stays put.</li>
+</ul>
+
+<!-- ============================================ -->
+<h2 id="rules">Rules that matter</h2>
+
+<ol>
+  <li><strong>Mark bills paid, log everything else as an expense.</strong> Never both for the same purchase — it double-counts.</li>
+  <li><strong>Debts go in as positive numbers.</strong> $4,800 owed is <code>4800</code>.</li>
+  <li><strong>Sinking funds are labels, not accounts.</strong> The money is already in savings; don't subtract it twice.</li>
+  <li><strong>Reconcile weekly.</strong> Typed balances drift from real ones faster than you'd think.</li>
+  <li><strong>Green dot before you type.</strong> Red means offline and it may not save.</li>
+  <li><strong>Retire, don't delete.</strong> Retiring a category keeps last year's numbers true.</li>
+</ol>
+
+<!-- ============================================ -->
+<h2 id="trouble">When something looks wrong</h2>
+
+<table>
+  <tr><th>What you see</th><th>What's going on</th></tr>
+  <tr><td>Red dot / "Offline"</td><td>No connection. Get back on wifi or signal; it reconnects itself. Don't type anything important until it's green.</td></tr>
+  <tr><td>Category looks overspent</td><td>Usually a bill marked paid <em>and</em> logged as an expense. Check <span class="ui">Budget</span> → transactions for a duplicate and delete one.</td></tr>
+  <tr><td>Bill won't go away</td><td>Marking it paid clears that month only — it comes back next month by design. To stop it for good, tap its name and delete it.</td></tr>
+  <tr><td>Net worth chart is blank</td><td>Fewer than two snapshots. Take another in the weekly review.</td></tr>
+  <tr><td>The two phones disagree</td><td>Close and reopen the app on both. It reloads everything fresh.</td></tr>
+  <tr><td>Trends look wrong for this month</td><td>The current month is partial. Compare finished months.</td></tr>
+  <tr><td>Payoff date says "never"</td><td>The monthly payment doesn't cover the interest. Not a glitch — that's the actual situation.</td></tr>
+  <tr><td>An update didn't show up</td><td>Close the app fully on each phone and reopen. It caches itself to work fast.</td></tr>
+</table>
+
+<div class="tip">
+  <span class="lab">Nothing here can really be broken</span>
+  <p>Every number can be edited or deleted, and there's a full backup a couple of taps away. Type the wrong thing, tap it, fix it. Nobody's going to break this.</p>
+</div>
+
+<div class="foot">
+  Household Budget Tracker · Sean &amp; Jessica Roper<br>
+  <span class="no-print">Tap <a href="index.html">Back to the app</a> up top to return.</span>
+</div>
+
+</div>
+
+<script>
+/* match whatever theme the app is set to, and allow toggling from here */
+(function(){
+  var saved = null;
+  try { saved = localStorage.getItem('hbt_theme'); } catch(e){}
+  var t = saved || (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  document.documentElement.setAttribute('data-theme', t);
+  var btn = document.getElementById('themeBtn');
+  if (btn) btn.addEventListener('click', function(){
+    var next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    try { localStorage.setItem('hbt_theme', next); } catch(e){}
+    var m = document.querySelector('meta[name=theme-color]');
+    if (m) m.setAttribute('content', next === 'dark' ? '#141210' : '#8a4a1c');
+  });
+})();
+</script>
+</body>
+</html>
