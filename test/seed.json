@@ -1,0 +1,370 @@
+{
+ "household_settings": [
+  {
+   "id": 1,
+   "password_hash": "35d05813a0619bc2c853cddcb1c9d7848b2a5ce4800e2d3328181c9176711a3b",
+   "app_name": "Household Budget Tracker"
+  }
+ ],
+ "accounts": [
+  {
+   "id": "aaaaaaaa-0000-4000-8000-000000000000",
+   "name": "Primary Checking",
+   "type": "checking",
+   "balance": 0,
+   "institution": null,
+   "notes": null,
+   "interest_rate": null,
+   "minimum_payment": null,
+   "target_payoff_date": null,
+   "include_in_net_worth": true,
+   "archived": false,
+   "sort_order": 10
+  },
+  {
+   "id": "aaaaaaaa-0000-4000-8000-000000000001",
+   "name": "Household Savings",
+   "type": "savings",
+   "balance": 0,
+   "institution": null,
+   "notes": null,
+   "interest_rate": null,
+   "minimum_payment": null,
+   "target_payoff_date": null,
+   "include_in_net_worth": true,
+   "archived": false,
+   "sort_order": 20
+  },
+  {
+   "id": "aaaaaaaa-0000-4000-8000-000000000002",
+   "name": "Emergency Fund",
+   "type": "savings",
+   "balance": 0,
+   "institution": null,
+   "notes": null,
+   "interest_rate": null,
+   "minimum_payment": null,
+   "target_payoff_date": null,
+   "include_in_net_worth": true,
+   "archived": false,
+   "sort_order": 30
+  },
+  {
+   "id": "aaaaaaaa-0000-4000-8000-000000000003",
+   "name": "Credit Card 1",
+   "type": "credit",
+   "balance": 0,
+   "institution": null,
+   "notes": null,
+   "interest_rate": null,
+   "minimum_payment": null,
+   "target_payoff_date": null,
+   "include_in_net_worth": true,
+   "archived": false,
+   "sort_order": 40
+  },
+  {
+   "id": "aaaaaaaa-0000-4000-8000-000000000004",
+   "name": "Credit Card 2",
+   "type": "credit",
+   "balance": 0,
+   "institution": null,
+   "notes": null,
+   "interest_rate": null,
+   "minimum_payment": null,
+   "target_payoff_date": null,
+   "include_in_net_worth": true,
+   "archived": false,
+   "sort_order": 50
+  },
+  {
+   "id": "aaaaaaaa-0000-4000-8000-000000000005",
+   "name": "Auto Loan",
+   "type": "loan",
+   "balance": 0,
+   "institution": null,
+   "notes": null,
+   "interest_rate": null,
+   "minimum_payment": null,
+   "target_payoff_date": null,
+   "include_in_net_worth": true,
+   "archived": false,
+   "sort_order": 60
+  },
+  {
+   "id": "aaaaaaaa-0000-4000-8000-000000000006",
+   "name": "Mortgage",
+   "type": "loan",
+   "balance": 0,
+   "institution": null,
+   "notes": null,
+   "interest_rate": null,
+   "minimum_payment": null,
+   "target_payoff_date": null,
+   "include_in_net_worth": true,
+   "archived": false,
+   "sort_order": 70
+  },
+  {
+   "id": "aaaaaaaa-0000-4000-8000-000000000007",
+   "name": "Cash on Hand",
+   "type": "cash",
+   "balance": 0,
+   "institution": null,
+   "notes": null,
+   "interest_rate": null,
+   "minimum_payment": null,
+   "target_payoff_date": null,
+   "include_in_net_worth": true,
+   "archived": false,
+   "sort_order": 80
+  }
+ ],
+ "budget_categories": [
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000000",
+   "name": "Groceries",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": false,
+   "color": null,
+   "archived": false,
+   "sort_order": 10
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000001",
+   "name": "Dining Out",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": false,
+   "color": null,
+   "archived": false,
+   "sort_order": 20
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000002",
+   "name": "Fuel / Gas",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": false,
+   "color": null,
+   "archived": false,
+   "sort_order": 30
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000003",
+   "name": "Utilities",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": false,
+   "color": null,
+   "archived": false,
+   "sort_order": 40
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000004",
+   "name": "Housing / Mortgage",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": false,
+   "color": null,
+   "archived": false,
+   "sort_order": 50
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000005",
+   "name": "Insurance",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": false,
+   "color": null,
+   "archived": false,
+   "sort_order": 60
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000006",
+   "name": "Phone / Internet",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": false,
+   "color": null,
+   "archived": false,
+   "sort_order": 70
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000007",
+   "name": "Subscriptions",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": false,
+   "color": null,
+   "archived": false,
+   "sort_order": 80
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000008",
+   "name": "Medical",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": true,
+   "color": null,
+   "archived": false,
+   "sort_order": 90
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000009",
+   "name": "Home Repairs",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": true,
+   "color": null,
+   "archived": false,
+   "sort_order": 100
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000010",
+   "name": "Vehicle / Auto",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": true,
+   "color": null,
+   "archived": false,
+   "sort_order": 110
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000011",
+   "name": "Ranch / Livestock",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": true,
+   "color": null,
+   "archived": false,
+   "sort_order": 120
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000012",
+   "name": "Kids / School",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": false,
+   "color": null,
+   "archived": false,
+   "sort_order": 130
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000013",
+   "name": "Clothing",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": true,
+   "color": null,
+   "archived": false,
+   "sort_order": 140
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000014",
+   "name": "Personal / Fun",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": false,
+   "color": null,
+   "archived": false,
+   "sort_order": 150
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000015",
+   "name": "Gifts",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": true,
+   "color": null,
+   "archived": false,
+   "sort_order": 160
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000016",
+   "name": "Giving / Tithe",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": false,
+   "color": null,
+   "archived": false,
+   "sort_order": 170
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000017",
+   "name": "Debt Payments",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": false,
+   "color": null,
+   "archived": false,
+   "sort_order": 180
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000018",
+   "name": "Savings Transfers",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": false,
+   "color": null,
+   "archived": false,
+   "sort_order": 190
+  },
+  {
+   "id": "bbbbbbbb-0000-4000-8000-000000000019",
+   "name": "Miscellaneous",
+   "monthly_planned_amount": 0,
+   "rollover_enabled": true,
+   "color": null,
+   "archived": false,
+   "sort_order": 200
+  }
+ ],
+ "sinking_funds": [
+  {
+   "id": "cccccccc-0000-4000-8000-000000000000",
+   "name": "Car Repair",
+   "target_amount": null,
+   "monthly_contribution": 0,
+   "current_balance": 0,
+   "last_contribution_month": null,
+   "notes": null,
+   "archived": false,
+   "sort_order": 10
+  },
+  {
+   "id": "cccccccc-0000-4000-8000-000000000001",
+   "name": "Christmas",
+   "target_amount": null,
+   "monthly_contribution": 0,
+   "current_balance": 0,
+   "last_contribution_month": null,
+   "notes": null,
+   "archived": false,
+   "sort_order": 20
+  },
+  {
+   "id": "cccccccc-0000-4000-8000-000000000002",
+   "name": "Property Taxes",
+   "target_amount": null,
+   "monthly_contribution": 0,
+   "current_balance": 0,
+   "last_contribution_month": null,
+   "notes": null,
+   "archived": false,
+   "sort_order": 30
+  },
+  {
+   "id": "cccccccc-0000-4000-8000-000000000003",
+   "name": "Vet Bills",
+   "target_amount": null,
+   "monthly_contribution": 0,
+   "current_balance": 0,
+   "last_contribution_month": null,
+   "notes": null,
+   "archived": false,
+   "sort_order": 40
+  },
+  {
+   "id": "cccccccc-0000-4000-8000-000000000004",
+   "name": "Home Maintenance",
+   "target_amount": null,
+   "monthly_contribution": 0,
+   "current_balance": 0,
+   "last_contribution_month": null,
+   "notes": null,
+   "archived": false,
+   "sort_order": 50
+  }
+ ],
+ "bills": [],
+ "bill_payments": [],
+ "income": [],
+ "budget_entries": [],
+ "transactions": [],
+ "savings_goals": [],
+ "sinking_fund_entries": [],
+ "net_worth_snapshots": []
+}

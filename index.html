@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
+<title>Household Budget Tracker</title>
+<meta name="description" content="Shared household budget, bills, savings and net worth tracker.">
+<meta name="theme-color" content="#8a4a1c">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Budget">
+<style>
+/* ---------- Ranch-tone design tokens ---------- */
+:root{
+  color-scheme: light;
+  --bg:#f7f3ec; --surface:#fffdf9; --surface-2:#f1ebe1; --surface-3:#e8e0d3;
+  --ink:#241f1a; --ink-2:#5d5348; --muted:#8b8073;
+  --line:#e3dace; --line-strong:#cfc3b1;
+  --accent:#a04a1a; --accent-ink:#fff8f2; --accent-soft:#f6e6d9;
+  --olive:#5f6f34; --olive-soft:#eaeedd;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --critical:#d03b3b;
+  --good-text:#046904; --critical-text:#a92c2c; --warn-text:#8a5c00;
+  /* validated chart palette (light, surface #faf7f2) */
+  --s1:#2a78d6; --s2:#eb6834; --s3:#1baf7a; --s4:#eda100; --s5:#e87ba4; --s6:#008300;
+  --grid:#e1e0d9; --axis:#c3c2b7; --chart-surface:#faf7f2;
+  --shadow:0 1px 2px rgba(36,31,26,.06), 0 6px 18px rgba(36,31,26,.06);
+  --radius:14px;
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#141210; --surface:#1c1a17; --surface-2:#252220; --surface-3:#312d29;
+  --ink:#f6f1e8; --ink-2:#c9c0b2; --muted:#9a9082;
+  --line:#332f2a; --line-strong:#4a443d;
+  --accent:#dd7d40; --accent-ink:#1c1a17; --accent-soft:#33251b;
+  --olive:#a3b85c; --olive-soft:#232717;
+  --good-text:#0ca30c; --critical-text:#e66767; --warn-text:#e0a021;
+  --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300;
+  --grid:#2c2c2a; --axis:#383835; --chart-surface:#1c1a17;
+  --shadow:0 1px 2px rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.35);
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--font); background:var(--bg); color:var(--ink);
+  -webkit-text-size-adjust:100%; overscroll-behavior-y:none;
+  font-size:16px; line-height:1.45;
+}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+h1,h2,h3,h4{margin:0;line-height:1.25;font-weight:650}
+a{color:var(--accent)}
+.hidden{display:none !important}
+.tnum{font-variant-numeric:tabular-nums}
+
+/* ---------- Gate ---------- */
+#gate{position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px;z-index:200}
+.gate-card{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:28px 24px;box-shadow:var(--shadow);text-align:center}
+.gate-mark{width:64px;height:64px;border-radius:18px;margin:0 auto 16px;display:grid;place-items:center;background:linear-gradient(150deg,var(--accent),#7d3a14);color:#fff8f2;font-size:30px}
+.gate-card h1{font-size:20px;margin-bottom:4px}
+.gate-card p{color:var(--muted);font-size:14px;margin:0 0 20px}
+.gate-err{color:var(--critical-text);font-size:13px;min-height:18px;margin-top:10px}
+
+/* ---------- Layout ---------- */
+#app{max-width:760px;margin:0 auto;padding:0 14px calc(96px + env(safe-area-inset-bottom))}
+header.topbar{
+  position:sticky;top:0;z-index:60;background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:saturate(1.4) blur(10px);-webkit-backdrop-filter:saturate(1.4) blur(10px);
+  padding:calc(10px + env(safe-area-inset-top)) 0 10px;margin:0 0 4px;border-bottom:1px solid var(--line);
+}
+.topbar-in{max-width:760px;margin:0 auto;padding:0 14px;display:flex;align-items:center;gap:10px}
+.topbar h1{font-size:19px;flex:1;letter-spacing:-.01em}
+.iconbtn{width:38px;height:38px;border-radius:11px;border:1px solid var(--line);background:var(--surface);display:grid;place-items:center;font-size:17px;color:var(--ink-2)}
+.iconbtn:active{transform:scale(.95)}
+.sync{font-size:11px;color:var(--muted);display:flex;align-items:center;gap:5px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--good)}
+.dot.off{background:var(--critical)}
+
+/* ---------- Cards ---------- */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:14px;margin:12px 0;box-shadow:var(--shadow)}
+.card-h{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.card-h h2{font-size:15px;flex:1;letter-spacing:-.01em}
+.card-h .link{font-size:13px;color:var(--accent);background:none;border:0;padding:4px 2px}
+.sub{color:var(--muted);font-size:13px}
+.empty{color:var(--muted);font-size:14px;text-align:center;padding:18px 8px;border:1px dashed var(--line-strong);border-radius:12px}
+
+/* ---------- Stat tiles ---------- */
+.tiles{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:12px 13px;box-shadow:var(--shadow)}
+.tile .lab{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.tile .val{font-size:22px;font-weight:680;letter-spacing:-.02em;margin-top:3px}
+.tile .note{font-size:12px;color:var(--ink-2);margin-top:2px}
+.pos{color:var(--good-text)} .neg{color:var(--critical-text)}
+
+/* ---------- Rows ---------- */
+.row{display:flex;align-items:center;gap:11px;padding:11px 4px;border-bottom:1px solid var(--line)}
+.row:last-child{border-bottom:0}
+.row .main{flex:1;min-width:0}
+.row .t{font-weight:560;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.row .s{font-size:12.5px;color:var(--muted);margin-top:1px}
+.row .amt{font-weight:640;font-size:15px;text-align:right;white-space:nowrap}
+.rowbtn{background:none;border:0;text-align:left;width:100%;padding:0;color:inherit;display:flex;align-items:center;gap:11px}
+.chev{color:var(--muted);font-size:13px}
+
+/* ---------- Pills / badges ---------- */
+.badge{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:640;padding:2px 7px;border-radius:999px;border:1px solid transparent;white-space:nowrap}
+.b-over{background:#fbeaea;color:var(--critical-text);border-color:#f0cccc}
+.b-soon{background:#fdf1dc;color:var(--warn-text);border-color:#f3ddb4}
+.b-ok{background:#e6f4e6;color:var(--good-text);border-color:#c9e6c9}
+.b-mut{background:var(--surface-2);color:var(--ink-2);border-color:var(--line)}
+:root[data-theme="dark"] .b-over{background:#3a1f1f;border-color:#5a2c2c}
+:root[data-theme="dark"] .b-soon{background:#3a2f14;border-color:#5c4a1c}
+:root[data-theme="dark"] .b-ok{background:#18301a;border-color:#2a4a2c}
+
+/* ---------- Progress ---------- */
+.bar{height:9px;border-radius:5px;background:var(--surface-3);overflow:hidden;position:relative}
+.bar > i{display:block;height:100%;border-radius:5px;background:var(--olive);transition:width .35s ease}
+.bar.warn > i{background:var(--warn)} .bar.over > i{background:var(--critical)} .bar.acc > i{background:var(--accent)}
+.bar .marker{position:absolute;top:-2px;bottom:-2px;width:2px;background:var(--ink-2);opacity:.55}
+
+/* ---------- Buttons ---------- */
+.btn{border:1px solid var(--line-strong);background:var(--surface);border-radius:11px;padding:10px 14px;font-size:14.5px;font-weight:580;color:var(--ink)}
+.btn:active{transform:scale(.98)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.olive{background:var(--olive);border-color:var(--olive);color:#fff}
+.btn.ghost{background:transparent}
+.btn.sm{padding:7px 11px;font-size:13px;border-radius:9px}
+.btn.dang{color:var(--critical-text);border-color:#e0b4b4}
+.btn.wide{width:100%}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+
+/* ---------- Forms ---------- */
+label.f{display:block;margin:11px 0 0}
+label.f > span{display:block;font-size:12px;font-weight:620;color:var(--ink-2);margin-bottom:5px}
+input,select,textarea{
+  width:100%;padding:11px 12px;border:1px solid var(--line-strong);border-radius:11px;
+  background:var(--surface);font-size:16px;
+}
+input:focus,select,textarea:focus{outline:2px solid var(--accent);outline-offset:1px}
+select{appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:36px}
+textarea{min-height:72px;resize:vertical}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chk{display:flex;align-items:center;gap:9px;margin:13px 0 0;font-size:14.5px}
+.chk input{width:20px;height:20px;flex:0 0 auto}
+
+/* ---------- Segmented ---------- */
+.seg{display:flex;background:var(--surface-2);border-radius:11px;padding:3px;gap:3px;border:1px solid var(--line)}
+.seg button{flex:1;border:0;background:transparent;border-radius:9px;padding:8px 6px;font-size:13.5px;font-weight:580;color:var(--ink-2)}
+.seg button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+/* ---------- Bottom nav + FAB ---------- */
+nav.tabs{
+  position:fixed;left:0;right:0;bottom:0;z-index:70;
+  background:color-mix(in srgb,var(--surface) 94%,transparent);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);
+  border-top:1px solid var(--line);
+  padding:6px 6px calc(6px + env(safe-area-inset-bottom));
+  display:grid;grid-template-columns:repeat(5,1fr);gap:2px;
+}
+nav.tabs button{border:0;background:none;padding:6px 2px;border-radius:10px;display:grid;justify-items:center;gap:2px;color:var(--muted);font-size:10.5px;font-weight:600}
+nav.tabs button .ic{font-size:19px;line-height:1}
+nav.tabs button[aria-selected="true"]{color:var(--accent)}
+#fab{
+  position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:75;
+  width:58px;height:58px;border-radius:20px;border:0;background:var(--accent);color:var(--accent-ink);
+  font-size:28px;box-shadow:0 8px 22px rgba(160,74,26,.38);display:grid;place-items:center;
+}
+#fab:active{transform:scale(.94)}
+
+/* ---------- Sheet / modal ---------- */
+.sheet-bg{position:fixed;inset:0;background:rgba(20,16,12,.5);z-index:100;opacity:0;transition:opacity .2s;backdrop-filter:blur(2px)}
+.sheet-bg.on{opacity:1}
+.sheet{
+  position:fixed;left:0;right:0;bottom:0;z-index:101;background:var(--surface);
+  border-radius:22px 22px 0 0;max-height:92vh;overflow-y:auto;
+  padding:8px 16px calc(20px + env(safe-area-inset-bottom));
+  transform:translateY(100%);transition:transform .26s cubic-bezier(.32,.72,0,1);
+  box-shadow:0 -8px 30px rgba(0,0,0,.18);
+}
+.sheet.on{transform:translateY(0)}
+.grab{width:38px;height:4px;border-radius:2px;background:var(--line-strong);margin:6px auto 10px}
+.sheet-h{display:flex;align-items:center;gap:10px;margin-bottom:6px;position:sticky;top:0;background:var(--surface);padding:4px 0 8px;z-index:2}
+.sheet-h h3{flex:1;font-size:17px}
+.sheet-foot{display:flex;gap:9px;margin-top:18px;padding-top:14px;border-top:1px solid var(--line)}
+.sheet-foot .btn{flex:1}
+@media(min-width:700px){
+  .sheet{left:50%;right:auto;transform:translate(-50%,100%);width:560px;bottom:0;border-radius:22px 22px 0 0}
+  .sheet.on{transform:translate(-50%,0)}
+}
+
+/* ---------- Charts ---------- */
+.chartwrap{position:relative;background:var(--chart-surface);border-radius:11px;padding:4px 0 0;margin-top:4px}
+svg.chart{display:block;width:100%;height:auto;overflow:visible}
+.legend{display:flex;flex-wrap:wrap;gap:5px 12px;margin-top:10px;font-size:12px;color:var(--ink-2)}
+.legend span.k{display:inline-flex;align-items:center;gap:5px}
+.legend i{width:10px;height:10px;border-radius:3px;display:inline-block;flex:0 0 auto}
+.tip{
+  position:absolute;pointer-events:none;background:var(--surface);border:1px solid var(--line-strong);
+  border-radius:10px;padding:8px 10px;font-size:12px;box-shadow:var(--shadow);z-index:5;min-width:120px;
+  transform:translate(-50%,-100%);opacity:0;transition:opacity .12s
+}
+.tip.on{opacity:1}
+.tip b{display:block;font-size:12px;margin-bottom:4px}
+.tip .tr{display:flex;justify-content:space-between;gap:12px}
+.tbl{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
+.tbl th,.tbl td{padding:6px 6px;border-bottom:1px solid var(--line);text-align:right}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl th{color:var(--muted);font-weight:620;font-size:11px;text-transform:uppercase;letter-spacing:.05em}
+
+/* ---------- Misc ---------- */
+.toast{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(12px);
+  background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;z-index:150;opacity:0;
+  transition:all .22s;pointer-events:none;max-width:90vw;text-align:center}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.month-nav{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.month-nav b{font-size:15px}
+.spinner{width:22px;height:22px;border:2.5px solid var(--line-strong);border-top-color:var(--accent);border-radius:50%;animation:sp .7s linear infinite;margin:24px auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+.list-scroll{max-height:none}
+hr.sep{border:0;border-top:1px solid var(--line);margin:14px 0}
+.kv{display:flex;justify-content:space-between;gap:10px;padding:6px 0;font-size:14px}
+.kv span{color:var(--muted)}
+.stepnum{width:22px;height:22px;border-radius:50%;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font-size:12px;font-weight:700;flex:0 0 auto}
+</style>
+</head>
+<body>
+
+<!-- Password gate -->
+<div id="gate">
+  <form class="gate-card" id="gateForm" autocomplete="on">
+    <div class="gate-mark">🏡</div>
+    <h1>Household Budget</h1>
+    <p>Shared access — enter the household password</p>
+    <input type="password" id="gatePw" placeholder="Password" autocomplete="current-password" aria-label="Household password">
+    <div class="gate-err" id="gateErr"></div>
+    <button class="btn pri wide" type="submit" style="margin-top:12px">Unlock</button>
+    <label class="chk" style="justify-content:center">
+      <input type="checkbox" id="gateRemember" checked><span style="font-size:13px;color:var(--muted)">Stay signed in on this device</span>
+    </label>
+  </form>
+</div>
+
+<!-- App -->
+<div id="shell" class="hidden">
+  <header class="topbar">
+    <div class="topbar-in">
+      <div style="flex:1;min-width:0">
+        <h1 id="viewTitle">Dashboard</h1>
+        <div class="sync"><i class="dot" id="syncDot"></i><span id="syncTxt">Live</span></div>
+      </div>
+      <button class="iconbtn" id="themeBtn" title="Toggle theme" aria-label="Toggle theme">◐</button>
+      <button class="iconbtn" id="moreBtn" title="Menu" aria-label="Menu">☰</button>
+    </div>
+  </header>
+  <main id="app"><div class="spinner"></div></main>
+  <button id="fab" aria-label="Quick add">+</button>
+  <nav class="tabs" id="tabs" role="tablist"></nav>
+</div>
+
+<div class="sheet-bg hidden" id="sheetBg"></div>
+<div class="sheet hidden" id="sheet" role="dialog" aria-modal="true"></div>
+<div class="toast" id="toast"></div>
+
+<script src="vendor/supabase.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

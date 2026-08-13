@@ -1,0 +1,17 @@
+{
+  "name": "household-budget-tracker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Shared household budget PWA for Sean & Jessica — Supabase-backed, live sync across devices.",
+  "scripts": {
+    "serve": "python3 -m http.server 8899",
+    "test:logic": "node test/logic.mjs",
+    "test:smoke": "node test/smoke.mjs"
+  },
+  "devDependencies": {
+    "playwright": "^1.49.0"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.112.3"
+  }
+}
