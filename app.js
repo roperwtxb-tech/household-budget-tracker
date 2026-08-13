@@ -3,11 +3,17 @@
    PWA + Supabase (live sync across devices), shared household password.
    ===================================================================== */
 
+/* Bump APP_VERSION on every release. It is part of the service-worker URL and
+   the cache name, so a new version can never be served from a stale cache —
+   GitHub Pages sits behind a CDN that holds files for several minutes, and a
+   changed URL is the only thing that reliably gets past it. */
+const APP_VERSION = '1.3.0';
+
 const CFG = {
   url: 'https://hrtuhexblsbdjfdbfblg.supabase.co',
   key: 'sb_publishable_3YxbUs181JkWsR9Xe5_tow_BAF9GsQS',
   appName: 'Household Budget Tracker',
-  version: 'v1.0.0'
+  version: 'v' + APP_VERSION
 };
 
 const sb = supabase.createClient(CFG.url, CFG.key, {
@@ -2206,12 +2212,42 @@ function viewMore(app) {
   pw.onclick = changePassword;
   const th = el('button', { class: 'btn wide ghost', style: 'margin-bottom:8px' }, 'Toggle light / dark');
   th.onclick = toggleTheme;
+  const upd = el('button', { class: 'btn wide ghost', style: 'margin-bottom:8px' }, 'Check for app updates');
+  upd.onclick = checkForUpdate;
   const out = el('button', { class: 'btn wide ghost dang' }, 'Sign out on this device');
   out.onclick = () => { localStorage.removeItem(LS_KEY); location.reload(); };
-  sc.append(pw, th, out);
+  sc.append(pw, th, upd, out);
   sc.appendChild(el('div', { class: 'sub', style: 'margin-top:14px;text-align:center' },
     `Household Budget Tracker ${CFG.version} · synced live via Supabase`));
   app.appendChild(sc);
+}
+
+/** Force a check for a newer build, bypassing every cache in the way. */
+async function checkForUpdate() {
+  toast('Checking…', 4000);
+  try {
+    // ask the server directly, with a URL nothing can have cached
+    const res = await fetch('app.js?_cb=' + Date.now().toString(36), { cache: 'reload' });
+    const text = await res.text();
+    const m = text.match(/APP_VERSION\s*=\s*'([^']+)'/);
+    const latest = m && m[1];
+    if (latest && latest !== APP_VERSION) {
+      toast(`Version ${latest} found — updating…`, 4000);
+      if ('serviceWorker' in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map(r => r.unregister()));
+      }
+      if (window.caches) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(k => caches.delete(k)));
+      }
+      setTimeout(() => location.reload(), 700);
+      return;
+    }
+    toast(`You're up to date (${CFG.version})`);
+  } catch (e) {
+    toast('Could not check — no connection?', 3200);
+  }
 }
 
 /** Which phone is this? Stamps changes so the register can say who did what. */
@@ -2414,7 +2450,8 @@ if ('serviceWorker' in navigator) {
     location.reload();
   });
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('sw.js').then(reg => {
+    // the version in the URL guarantees a new worker is fetched on every release
+    navigator.serviceWorker.register('sw.js?v=' + APP_VERSION).then(reg => {
       // nudge a waiting worker to take over straight away
       if (reg.waiting) reg.waiting.postMessage('skipWaiting');
       reg.addEventListener('updatefound', () => {
