@@ -100,21 +100,40 @@ const S = {
   view: 'dashboard',
   month: monthStart(today()),
   trendMode: 'chart',
+  acctId: null,
   data: {
     settings: null, accounts: [], bills: [], bill_payments: [], income: [],
     budget_categories: [], budget_entries: [], transactions: [],
-    savings_goals: [], sinking_funds: [], sinking_fund_entries: [], net_worth_snapshots: []
+    savings_goals: [], sinking_funds: [], sinking_fund_entries: [], net_worth_snapshots: [],
+    transfers: [], account_events: []
   },
   loaded: false
 };
 const TABLES = ['accounts', 'bills', 'bill_payments', 'income', 'budget_categories', 'budget_entries',
-  'transactions', 'savings_goals', 'sinking_funds', 'sinking_fund_entries', 'net_worth_snapshots'];
+  'transactions', 'savings_goals', 'sinking_funds', 'sinking_fund_entries', 'net_worth_snapshots',
+  'transfers', 'account_events'];
+
+/* ---- which phone is this? used to stamp who made each change ---- */
+const DEV_KEY = 'hbt_device';
+const who = () => localStorage.getItem(DEV_KEY) || null;
+const setWho = n => { if (n) localStorage.setItem(DEV_KEY, n); else localStorage.removeItem(DEV_KEY); };
+/* tables that carry a device_name column */
+const ATTRIBUTED = new Set(['transactions', 'bill_payments', 'income', 'transfers', 'account_events']);
 
 const D = S.data;
 const cats = () => D.budget_categories.filter(c => !c.archived).sort((a, b) => (a.sort_order - b.sort_order) || a.name.localeCompare(b.name));
 const accts = () => D.accounts.filter(a => !a.archived).sort((a, b) => (a.sort_order - b.sort_order) || a.name.localeCompare(b.name));
 const catName = id => (D.budget_categories.find(c => c.id === id) || {}).name || 'Uncategorized';
 const acctName = id => (D.accounts.find(a => a.id === id) || {}).name || '—';
+/* two accounts can share a name (e.g. TTFCU checking and TTFCU savings) —
+   add the type only when it's needed to tell them apart */
+function acctLabel(id) {
+  const a = D.accounts.find(x => x.id === id);
+  if (!a) return '—';
+  const key = String(a.name || '').trim().toLowerCase();
+  const clash = D.accounts.filter(x => !x.archived && String(x.name || '').trim().toLowerCase() === key).length > 1;
+  return clash ? `${a.name} (${typeLabel(a.type).replace(/\s*\(.*\)/, '')})` : a.name;
+}
 
 /* ------------------------- toast ------------------------- */
 let toastT;
@@ -164,6 +183,7 @@ async function loadAll() {
 
 async function save(table, row, opts = {}) {
   const payload = { ...row };
+  if (ATTRIBUTED.has(table) && payload.device_name == null) payload.device_name = who();
   const { data, error } = await sb.from(table).upsert(payload).select();
   if (error) { console.error(error); toast('Save failed: ' + error.message, 3600); throw error; }
   const rec = data && data[0];
@@ -390,6 +410,126 @@ function payoffDate(balance, rate, payment) {
 }
 
 /* =====================================================================
+   Account balances, transfers and the register
+   ===================================================================== */
+
+/** Set an account's balance and record who did it, so the other phone can see. */
+async function setBalance(account, newBalance, note) {
+  const old = num(account.balance);
+  const nb = num(newBalance);
+  if (Math.abs(nb - old) < 0.005 && account.last_reconciled_at) return null;
+  await sb.from('account_events').insert({
+    account_id: account.id, kind: 'balance_set',
+    old_balance: old, new_balance: nb, delta: Math.round((nb - old) * 100) / 100,
+    note: note || null, device_name: who()
+  });
+  const rec = await save('accounts', {
+    ...account, balance: nb,
+    last_reconciled_at: new Date().toISOString(), updated_at: new Date().toISOString()
+  }, { silent: true });
+  return rec;
+}
+
+/** Move money between two tracked accounts. Not budget spending — it stays in the household. */
+async function applyTransfer({ date, from, to, amount, note }) {
+  const f = D.accounts.find(a => a.id === from);
+  const t = D.accounts.find(a => a.id === to);
+  const amt = Math.round(num(amount) * 100) / 100;
+  if (!f || !t) throw new Error('Pick both accounts');
+  if (f.id === t.id) throw new Error('Pick two different accounts');
+  if (amt <= 0) throw new Error('Enter an amount');
+
+  const { error } = await sb.from('transfers').insert({
+    date: date || iso(today()), from_account_id: f.id, to_account_id: t.id,
+    amount: amt, note: note || null, device_name: who()
+  });
+  if (error) throw error;
+
+  // money leaving an asset lowers it; money "leaving" a debt means borrowing more
+  const fromNew = isDebt(f) ? num(f.balance) + amt : num(f.balance) - amt;
+  // money into an asset raises it; money into a debt pays it down
+  const toNew = isDebt(t) ? num(t.balance) - amt : num(t.balance) + amt;
+
+  await save('accounts', { ...f, balance: fromNew, updated_at: new Date().toISOString() }, { silent: true });
+  await save('accounts', { ...t, balance: toNew, updated_at: new Date().toISOString() }, { silent: true });
+  await loadAll();
+  return { fromNew, toNew, amt };
+}
+
+/** Everything that has happened to one account, newest first. */
+function accountRegister(accountId) {
+  const rows = [];
+  const push = r => rows.push(r);
+
+  D.account_events.filter(e => e.account_id === accountId).forEach(e => push({
+    ts: e.created_at, date: String(e.created_at).slice(0, 10), type: 'balance',
+    title: e.kind === 'opening' ? 'Opening balance' : 'Balance updated',
+    detail: e.old_balance != null && num(e.old_balance) !== num(e.new_balance)
+      ? `${money(e.old_balance)} → ${money(e.new_balance)}` : `set to ${money(e.new_balance)}`,
+    amount: e.delta != null ? num(e.delta) : null, who: e.device_name, applied: true
+  }));
+
+  D.transfers.filter(t => t.from_account_id === accountId || t.to_account_id === accountId).forEach(t => {
+    const out = t.from_account_id === accountId;
+    const other = out ? t.to_account_id : t.from_account_id;
+    const me = D.accounts.find(a => a.id === accountId);
+    // on a debt account the sign flips: money in pays it down
+    const signed = (me && isDebt(me)) ? (out ? num(t.amount) : -num(t.amount)) : (out ? -num(t.amount) : num(t.amount));
+    push({
+      ts: t.created_at, date: t.date, type: 'transfer',
+      title: out ? `Transfer to ${acctLabel(other)}` : `Transfer from ${acctLabel(other)}`,
+      detail: t.note || '', amount: signed, who: t.device_name, applied: true
+    });
+  });
+
+  D.transactions.filter(t => t.account_id === accountId).forEach(t => push({
+    ts: t.created_at || t.date, date: t.date, type: 'transaction',
+    title: t.description || (t.kind === 'income' ? 'Income' : catName(t.category_id)),
+    detail: catName(t.category_id), amount: t.kind === 'income' ? num(t.amount) : -num(t.amount),
+    who: t.device_name, applied: false
+  }));
+
+  D.bill_payments.filter(p => p.paid && p.paid_from_account_id === accountId).forEach(p => {
+    const bill = D.bills.find(b => b.id === p.bill_id);
+    push({
+      ts: p.created_at || p.paid_date, date: p.paid_date || p.cycle_date, type: 'bill',
+      title: bill ? `${bill.name} (bill paid)` : 'Bill paid',
+      detail: bill ? catName(bill.category_id) : '',
+      amount: -num(p.paid_amount != null ? p.paid_amount : (bill ? bill.amount : 0)),
+      who: p.device_name, applied: false
+    });
+  });
+
+  D.income.filter(i => i.account_id === accountId && i.received).forEach(i => push({
+    ts: i.created_at || i.date, date: i.date, type: 'income',
+    title: i.source, detail: 'income received', amount: num(i.amount), who: i.device_name, applied: false
+  }));
+
+  return rows.sort((a, b) => String(b.ts || b.date).localeCompare(String(a.ts || a.date)));
+}
+
+/** Balance the app expects, given what's been logged since the last reconcile. */
+function expectedBalance(account) {
+  const evts = D.account_events.filter(e => e.account_id === account.id)
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  const boundary = account.last_reconciled_at || (evts[0] && evts[0].created_at) || null;
+  const after = ts => !boundary || String(ts || '') > String(boundary);
+
+  let unapplied = 0;
+  accountRegister(account.id).forEach(r => {
+    if (r.applied || r.amount == null) return;      // balance edits and transfers already moved the balance
+    if (!after(r.ts)) return;
+    unapplied += r.amount;
+  });
+  const stored = num(account.balance);
+  return {
+    stored, unapplied: Math.round(unapplied * 100) / 100,
+    expected: Math.round((stored + unapplied) * 100) / 100,
+    reconciledAt: boundary
+  };
+}
+
+/* =====================================================================
    Sinking funds
    ===================================================================== */
 function fundsDueContribution(m) {
@@ -555,7 +695,7 @@ function openSheet(title, buildBody, footerButtons) {
   if (footerButtons && footerButtons.length) {
     const foot = el('div', { class: 'sheet-foot' });
     footerButtons.forEach(b => {
-      const btn = el('button', { class: 'btn ' + (b.cls || '') }, esc(b.label));
+      const btn = el('button', { class: 'btn ' + (b.cls || ''), id: b.id || null }, esc(b.label));
       btn.onclick = b.onClick;
       foot.appendChild(btn);
     });
@@ -661,7 +801,71 @@ function editAccount(a) {
     });
   }, [
     ...(isNew ? [] : [{ label: 'Delete', cls: 'dang', onClick: () => confirmDelete('account', () => remove('accounts', a.id)) }]),
-    { label: 'Save', cls: 'pri', onClick: async () => { const row = sheetGet(); closeSheet(); await save('accounts', row); } }
+    {
+      label: 'Save', cls: 'pri', onClick: async () => {
+        const row = sheetGet(); closeSheet();
+        const before = D.accounts.find(x => x.id === row.id);
+        if (before && Math.abs(num(row.balance) - num(before.balance)) > 0.004) {
+          // keep the edits, then record the balance change in the register
+          const merged = await save('accounts', { ...row, balance: before.balance }, { silent: true });
+          await setBalance(merged || { ...before, ...row, balance: before.balance }, row.balance);
+          toast('Saved');
+          render();
+        } else {
+          await save('accounts', row);
+        }
+      }
+    }
+  ]);
+}
+
+/* ---------------------- transfers ---------------------- */
+/** Builds the transfer form into any container; returns nothing, sets container._get */
+function buildTransferForm(b, preFrom) {
+  {
+    b.appendChild(el('div', { class: 'sub', style: 'margin-bottom:4px' },
+      'Moves money between two of your accounts. Both balances update — this is not counted as spending.'));
+    const from = field(b, 'From', sel(acctOptions(false), preFrom || ''));
+    const to = field(b, 'To', sel(acctOptions(false), ''));
+    const amt = field(b, 'Amount', money_(''));
+    const g = el('div', { class: 'f2' }); b.appendChild(g);
+    const date = field(g, 'Date', inp('date', iso(today())));
+    const note = field(g, 'Note (optional)', inp('text', '', { placeholder: 'e.g. monthly savings' }));
+    const preview = el('div', { class: 'sub', style: 'margin-top:12px;padding:10px 12px;background:var(--surface-2);border-radius:10px;border:1px solid var(--line)' });
+    b.appendChild(preview);
+    const drawPreview = () => {
+      const f = D.accounts.find(a => a.id === from.value);
+      const t = D.accounts.find(a => a.id === to.value);
+      const v = num(amt.value);
+      if (!f || !t || v <= 0) { preview.textContent = 'Pick both accounts and an amount to see the result.'; return; }
+      if (f.id === t.id) { preview.innerHTML = '<b style="color:var(--critical-text)">Pick two different accounts.</b>'; return; }
+      const fNew = isDebt(f) ? num(f.balance) + v : num(f.balance) - v;
+      const tNew = isDebt(t) ? num(t.balance) - v : num(t.balance) + v;
+      preview.innerHTML =
+        `<div style="display:flex;justify-content:space-between"><span>${esc(acctLabel(f.id))}</span><span class="tnum">${money(f.balance)} → <b>${money(fNew)}</b></span></div>
+         <div style="display:flex;justify-content:space-between;margin-top:4px"><span>${esc(acctLabel(t.id))}</span><span class="tnum">${money(t.balance)} → <b>${money(tNew)}</b></span></div>` +
+        (isDebt(t) ? `<div style="margin-top:6px;color:var(--muted)">Paying down ${esc(acctLabel(t.id))} — not counted as spending, since the purchases were already budgeted.</div>` : '') +
+        (fNew < 0 && !isDebt(f) ? `<div style="margin-top:6px;color:var(--critical-text)"><b>Heads up:</b> that would put ${esc(acctLabel(f.id))} below zero.</div>` : '');
+    };
+    [from, to, amt].forEach(n => { n.addEventListener('change', drawPreview); n.addEventListener('input', drawPreview); });
+    drawPreview();
+    b._get = () => ({ kind: 'transfer', from: from.value, to: to.value, amount: num(amt.value), date: date.value, note: note.value.trim() });
+  }
+}
+
+async function submitTransfer(v) {
+  try {
+    const r = await applyTransfer(v);
+    closeSheet();
+    toast(`Moved ${money(r.amt)}`);
+    render();
+  } catch (e) { toast(e.message || 'Transfer failed', 3200); }
+}
+
+function transferSheet(preFrom) {
+  openSheet('Transfer between accounts', b => buildTransferForm(b, preFrom), [
+    { label: 'Cancel', cls: 'ghost', onClick: closeSheet },
+    { label: 'Transfer', cls: 'pri', onClick: () => submitTransfer(sheetGet()) }
   ]);
 }
 /* helper so footer buttons can read the body's _get */
@@ -834,12 +1038,15 @@ function quickAdd() {
   let mode = 'expense';
   openSheet('Quick add', b => {
     const seg = el('div', { class: 'seg', style: 'margin-bottom:4px' });
-    const modes = [['expense', 'Expense'], ['income', 'Income'], ['bill', 'Pay bill']];
+    const modes = [['expense', 'Expense'], ['income', 'Income'], ['bill', 'Bill'], ['transfer', 'Transfer']];
     const panel = el('div', {});
     const draw = () => {
       $$('button', seg).forEach(x => x.setAttribute('aria-selected', String(x.dataset.m === mode)));
       panel.innerHTML = '';
+      const sub = $('#qaSubmit');            // absent on the very first draw
+      if (sub) sub.textContent = mode === 'transfer' ? 'Transfer' : 'Add';
       if (mode === 'bill') return drawBillPay(panel);
+      if (mode === 'transfer') return buildTransferForm(panel);
       const amt = field(panel, 'Amount', money_('', { autofocus: 'true' }));
       const desc = field(panel, mode === 'expense' ? 'What for?' : 'Source', inp('text', '', { placeholder: mode === 'expense' ? 'e.g. Groceries at HEB' : 'e.g. Side job' }));
       const cat = field(panel, 'Category', sel(catOptions(), ''));
@@ -860,9 +1067,10 @@ function quickAdd() {
   }, [
     { label: 'Cancel', cls: 'ghost', onClick: closeSheet },
     {
-      label: 'Add', cls: 'pri', onClick: async () => {
+      label: 'Add', cls: 'pri', id: 'qaSubmit', onClick: async () => {
         const v = sheetGet();
         if (!v) { closeSheet(); return; }
+        if (v.kind === 'transfer') return submitTransfer(v);
         if (!v.amount || v.amount <= 0) return toast('Enter an amount');
         closeSheet();
         await save('transactions', v, { msg: (v.kind === 'income' ? 'Income' : 'Expense') + ' added' });
@@ -944,6 +1152,40 @@ function billRow(x, opts = {}) {
   tog.onclick = async e => { e.stopPropagation(); await setBillPaid(x.bill, x.cycle, !x.paid); };
   row.appendChild(tog);
   return row;
+}
+
+/** One account line, with who touched it last — tapping opens its register */
+function accountRow(a) {
+  const evts = D.account_events.filter(e => e.account_id === a.id)
+    .sort((x, y) => String(y.created_at).localeCompare(String(x.created_at)));
+  const last = evts[0];
+  const exp = expectedBalance(a);
+  const r = el('button', { class: 'row rowbtn' });
+  let sub = `${esc(typeLabel(a.type))}${a.institution ? ' · ' + esc(a.institution) : ''}`;
+  if (last) sub = `${last.device_name ? esc(last.device_name) + ' updated' : 'Updated'} ${timeAgo(last.created_at)}`;
+  r.innerHTML = `<div class="main"><div class="t">${esc(acctLabel(a.id))}</div>
+    <div class="s">${sub}</div></div>
+    <div style="text-align:right">
+      <div class="amt">${money(a.balance)}</div>
+      ${Math.abs(exp.unapplied) > 0.004 ? `<div class="s" style="color:var(--muted)">logged: ${money(exp.expected)}</div>` : ''}
+    </div><span class="chev">›</span>`;
+  r.onclick = () => openRegister(a.id);
+  return r;
+}
+
+function timeAgo(ts) {
+  if (!ts) return '';
+  const then = new Date(ts).getTime();
+  if (!isFinite(then)) return '';
+  const mins = Math.round((Date.now() - then) / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return `${mins} min ago`;
+  const hrs = Math.round(mins / 60);
+  if (hrs < 24) return `${hrs} hr${hrs > 1 ? 's' : ''} ago`;
+  const days = Math.round(hrs / 24);
+  if (days === 1) return 'yesterday';
+  if (days < 30) return `${days} days ago`;
+  return new Date(ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 function progressRow(name, current, target, opts = {}) {
@@ -1240,21 +1482,20 @@ function viewAccounts(app) {
   const assets = accts().filter(a => !isDebt(a));
   const debts = accts().filter(isDebt);
 
+  const tb = el('div', { class: 'card' });
+  const tbtn = el('button', { class: 'btn olive wide' }, '⇄  Transfer between accounts');
+  tbtn.onclick = () => transferSheet();
+  tb.appendChild(tbtn);
+  app.appendChild(tb);
+
   const ac = sectionCard('Accounts', '+ New account', () => editAccount(null));
   if (!assets.length) ac.appendChild(emptyNote('No accounts yet.'));
-  assets.forEach(a => {
-    const r = el('button', { class: 'row rowbtn' });
-    r.innerHTML = `<div class="main"><div class="t">${esc(a.name)}</div>
-      <div class="s">${esc(typeLabel(a.type))}${a.institution ? ' · ' + esc(a.institution) : ''}</div></div>
-      <div class="amt">${money(a.balance)}</div><span class="chev">›</span>`;
-    r.onclick = () => editAccount(a);
-    ac.appendChild(r);
-  });
+  assets.forEach(a => ac.appendChild(accountRow(a)));
   app.appendChild(ac);
 
   const dc = sectionCard('Debt payoff', null);
   if (!debts.length) dc.appendChild(emptyNote('No credit cards or loans tracked.'));
-  debts.forEach(a => {
+  debts.forEach(a => {  // eslint-disable-line
     const bal = Math.abs(num(a.balance));
     const months = payoffMonths(bal, a.interest_rate, a.minimum_payment);
     const pd = payoffDate(bal, a.interest_rate, a.minimum_payment);
@@ -1270,9 +1511,15 @@ function viewAccounts(app) {
       </div>
       ${totalInterest != null ? `<div class="kv"><span>Interest you'll pay</span><b>${money0(totalInterest)}</b></div>` : ''}
       ${a.target_payoff_date ? `<div class="kv"><span>Your target</span><b>${fmtD(a.target_payoff_date, { month: 'long', year: 'numeric' })}</b></div>` : ''}`;
-    const b = el('button', { class: 'btn sm wide ghost', style: 'margin-top:8px' }, 'Update balance / details');
+    const brow = el('div', { class: 'btnrow', style: 'margin-top:8px' });
+    const b = el('button', { class: 'btn sm ghost' }, 'Update balance / details');
     b.onclick = () => editAccount(a);
-    w.appendChild(b);
+    const reg = el('button', { class: 'btn sm ghost' }, 'History');
+    reg.onclick = () => openRegister(a.id);
+    const pay = el('button', { class: 'btn sm' }, 'Make a payment');
+    pay.onclick = () => transferSheet();
+    brow.append(b, reg, pay);
+    w.appendChild(brow);
     dc.appendChild(w);
   });
   app.appendChild(dc);
@@ -1289,6 +1536,95 @@ function viewAccounts(app) {
     });
     app.appendChild(c);
   }
+}
+
+/* =====================================================================
+   VIEW: Account register
+   ===================================================================== */
+function openRegister(id) { S.acctId = id; go('account'); }
+
+const REG_ICON = { balance: '✎', transfer: '⇄', transaction: '🧾', bill: '📅', income: '💵' };
+
+function viewAccount(app) {
+  const a = D.accounts.find(x => x.id === S.acctId);
+  if (!a) { app.appendChild(emptyNote('That account is gone.')); return; }
+  const exp = expectedBalance(a);
+  const rows = accountRegister(a.id);
+
+  const head = el('div', { class: 'card' });
+  head.innerHTML = `<div style="display:flex;align-items:baseline;gap:10px">
+      <div style="flex:1"><div style="font-size:18px;font-weight:660;letter-spacing:-.01em">${esc(acctLabel(a.id))}</div>
+      <div class="sub">${esc(typeLabel(a.type))}${a.institution ? ' · ' + esc(a.institution) : ''}</div></div>
+      <div class="tnum" style="font-size:22px;font-weight:680">${money(a.balance)}</div>
+    </div>`;
+  const hb = el('div', { class: 'btnrow', style: 'margin-top:12px' });
+  const rec = el('button', { class: 'btn pri sm' }, 'Update balance');
+  rec.onclick = () => reconcileSheet(a);
+  const tr = el('button', { class: 'btn olive sm' }, '⇄ Transfer');
+  tr.onclick = () => transferSheet(a.id);
+  const ed = el('button', { class: 'btn ghost sm' }, 'Edit details');
+  ed.onclick = () => editAccount(a);
+  hb.append(rec, tr, ed);
+  head.appendChild(hb);
+  app.appendChild(head);
+
+  /* does logged activity agree with the typed balance? */
+  if (Math.abs(exp.unapplied) > 0.004) {
+    const c = el('div', { class: 'card', style: 'border-color:var(--accent);background:var(--accent-soft)' });
+    c.innerHTML = `<div style="font-weight:620;margin-bottom:6px">Logged activity doesn't match this balance</div>
+      <div class="kv"><span>Balance you entered</span><b class="tnum">${money(exp.stored)}</b></div>
+      <div class="kv"><span>Logged since ${exp.reconciledAt ? timeAgo(exp.reconciledAt) : 'the start'}</span><b class="tnum ${exp.unapplied < 0 ? 'neg' : 'pos'}">${exp.unapplied > 0 ? '+' : '−'}${money(Math.abs(exp.unapplied))}</b></div>
+      <div class="kv" style="border-top:1px solid var(--line);margin-top:4px;padding-top:8px"><span>Which would make it</span><b class="tnum">${money(exp.expected)}</b></div>
+      <div class="sub" style="margin-top:8px">Either those purchases haven't cleared the bank yet, or the balance needs updating. Tap <b>Update balance</b> when you've checked.</div>`;
+    app.appendChild(c);
+  }
+
+  const c = sectionCard('History', null);
+  c.appendChild(el('div', { class: 'sub', style: 'margin:-4px 0 8px' },
+    'Everything that has touched this account, newest first — so neither of us enters the same thing twice.'));
+  if (!rows.length) c.appendChild(emptyNote('Nothing recorded yet. Update the balance or log something and it will show up here.'));
+  rows.slice(0, 150).forEach(r => {
+    const row = el('div', { class: 'row' });
+    const amt = r.amount == null ? '' :
+      `<div class="amt ${r.amount > 0 ? 'pos' : r.amount < 0 ? 'neg' : ''}">${r.amount > 0 ? '+' : r.amount < 0 ? '−' : ''}${money(Math.abs(r.amount))}</div>`;
+    row.innerHTML = `<div style="font-size:15px;width:24px;text-align:center;flex:0 0 auto">${REG_ICON[r.type] || '•'}</div>
+      <div class="main"><div class="t">${esc(r.title)}</div>
+        <div class="s">${fmtD(r.date, { month: 'short', day: 'numeric' })}${r.who ? ' · ' + esc(r.who) : ''}${r.detail ? ' · ' + esc(r.detail) : ''}</div></div>
+      ${amt}`;
+    c.appendChild(row);
+  });
+  if (rows.length > 150) c.appendChild(el('div', { class: 'sub', style: 'text-align:center;padding-top:10px' }, `Showing the most recent 150 of ${rows.length}.`));
+  app.appendChild(c);
+
+  const back = el('button', { class: 'btn wide ghost' }, '‹ All accounts');
+  back.onclick = () => go('accounts');
+  app.appendChild(back);
+}
+
+/** Focused "what does the bank say?" sheet, with the app's expectation shown */
+function reconcileSheet(a) {
+  const exp = expectedBalance(a);
+  openSheet('Update ' + acctLabel(a.id), b => {
+    const v = field(b, isDebt(a) ? 'Amount owed right now' : 'Balance right now', money_(num(a.balance)));
+    const info = el('div', { class: 'sub', style: 'margin-top:10px' });
+    info.innerHTML = Math.abs(exp.unapplied) > 0.004
+      ? `Based on what's been logged, we'd expect <b>${money(exp.expected)}</b>. If the bank says something else, the bank wins — type what it says.`
+      : `Currently ${money(exp.stored)}${exp.reconciledAt ? ` · last updated ${timeAgo(exp.reconciledAt)}` : ''}.`;
+    b.appendChild(info);
+    const note = field(b, 'Note (optional)', inp('text', '', { placeholder: 'e.g. after payday' }));
+    b._get = () => ({ balance: num(v.value), note: note.value.trim() });
+    setTimeout(() => { v.focus(); v.select(); }, 250);
+  }, [
+    { label: 'Cancel', cls: 'ghost', onClick: closeSheet },
+    {
+      label: 'Save', cls: 'pri', onClick: async () => {
+        const val = sheetGet(); closeSheet();
+        await setBalance(a, val.balance, val.note);
+        toast('Balance updated');
+        render();
+      }
+    }
+  ]);
 }
 
 /* =====================================================================
@@ -1664,7 +2000,10 @@ function viewReview(app) {
   accts().forEach(a => {
     const r = el('div', { class: 'row' });
     const left = el('div', { class: 'main' });
-    left.innerHTML = `<div class="t">${esc(a.name)}</div><div class="s">${esc(typeLabel(a.type))}${isDebt(a) ? ' · amount owed' : ''}</div>`;
+    const ev = D.account_events.filter(e => e.account_id === a.id)
+      .sort((x, y) => String(y.created_at).localeCompare(String(x.created_at)))[0];
+    const seen = ev ? `${ev.device_name ? esc(ev.device_name) : 'Updated'} ${timeAgo(ev.created_at)}` : `${esc(typeLabel(a.type))}${isDebt(a) ? ' · amount owed' : ''}`;
+    left.innerHTML = `<div class="t">${esc(acctLabel(a.id))}</div><div class="s">${seen}</div>`;
     const i = el('input', { type: 'number', step: '0.01', inputmode: 'decimal', style: 'width:120px;text-align:right;padding:8px 10px' });
     i.value = num(a.balance);
     inputs.push({ a, i });
@@ -1678,7 +2017,7 @@ function viewReview(app) {
       let n = 0;
       for (const { a, i } of inputs) {
         const v = num(i.value);
-        if (Math.abs(v - num(a.balance)) > 0.004) { await save('accounts', { ...a, balance: v, updated_at: new Date().toISOString() }, { silent: true }); n++; }
+        if (Math.abs(v - num(a.balance)) > 0.004) { await setBalance(a, v, 'weekly review'); n++; }
       }
       toast(n ? `Updated ${n} balance${n > 1 ? 's' : ''}` : 'No changes');
       render();
@@ -1859,6 +2198,10 @@ function viewMore(app) {
   app.appendChild(bc);
 
   const sc = sectionCard('Settings', null);
+  const dev = el('button', { class: 'btn wide', style: 'margin-bottom:8px' },
+    who() ? `This phone: ${esc(who())}` : 'Name this phone');
+  dev.onclick = () => deviceSheet();
+  sc.appendChild(dev);
   const pw = el('button', { class: 'btn wide', style: 'margin-bottom:8px' }, 'Change household password');
   pw.onclick = changePassword;
   const th = el('button', { class: 'btn wide ghost', style: 'margin-bottom:8px' }, 'Toggle light / dark');
@@ -1869,6 +2212,37 @@ function viewMore(app) {
   sc.appendChild(el('div', { class: 'sub', style: 'margin-top:14px;text-align:center' },
     `Household Budget Tracker ${CFG.version} · synced live via Supabase`));
   app.appendChild(sc);
+}
+
+/** Which phone is this? Stamps changes so the register can say who did what. */
+function deviceSheet(firstRun) {
+  openSheet(firstRun ? 'Which phone is this?' : 'Name this phone', b => {
+    b.appendChild(el('p', { class: 'sub', style: 'margin-top:0' },
+      'Used to label who made each change — so when a balance updates, the other one of you can see it was already handled. Stored on this phone only.'));
+    const name = field(b, 'Name', inp('text', who() || '', { placeholder: 'e.g. Sean', autocomplete: 'off' }));
+    const quick = el('div', { class: 'btnrow', style: 'margin-top:10px' });
+    ['Sean', 'Jessica'].forEach(n => {
+      const q = el('button', { class: 'btn sm' }, n);
+      q.onclick = () => { name.value = n; };
+      quick.appendChild(q);
+    });
+    b.appendChild(quick);
+    b._get = () => ({ name: name.value.trim() });
+    setTimeout(() => name.focus(), 250);
+  }, [
+    ...(firstRun ? [{ label: 'Skip', cls: 'ghost', onClick: () => { setWho('—'); closeSheet(); } }]
+      : [{ label: 'Cancel', cls: 'ghost', onClick: closeSheet }]),
+    {
+      label: 'Save', cls: 'pri', onClick: () => {
+        const v = sheetGet();
+        if (!v.name) return toast('Enter a name');
+        setWho(v.name);
+        closeSheet();
+        toast(`This phone is ${v.name}`);
+        render();
+      }
+    }
+  ]);
 }
 
 function changePassword() {
@@ -1912,13 +2286,14 @@ const VIEWS = {
   funds: { title: 'Sinking Funds', fn: viewFunds },
   networth: { title: 'Net Worth', fn: viewNetWorth },
   trends: { title: 'Spending Trends', fn: viewTrends },
-  review: { title: 'Weekly Review', fn: viewReview }
+  review: { title: 'Weekly Review', fn: viewReview },
+  account: { title: 'Account', fn: viewAccount }
 };
 const TABS = [
   ['dashboard', '🏠', 'Home'], ['bills', '🧾', 'Bills'], ['budget', '📋', 'Budget'],
   ['accounts', '🏦', 'Accounts'], ['more', '⋯', 'More']
 ];
-const TAB_OF = { dashboard: 'dashboard', bills: 'bills', budget: 'budget', accounts: 'accounts', more: 'more', income: 'more', savings: 'more', funds: 'more', networth: 'more', trends: 'more', review: 'more' };
+const TAB_OF = { dashboard: 'dashboard', bills: 'bills', budget: 'budget', accounts: 'accounts', more: 'more', income: 'more', savings: 'more', funds: 'more', networth: 'more', trends: 'more', review: 'more', account: 'accounts' };
 
 function go(v) {
   S.view = v;
@@ -1947,7 +2322,8 @@ function render() {
   if (!S.loaded) return;
   reindexPayments();
   const v = VIEWS[S.view] || VIEWS.dashboard;
-  $('#viewTitle').textContent = v.title;
+  const acct = S.view === 'account' && D.accounts.find(x => x.id === S.acctId);
+  $('#viewTitle').textContent = acct ? acctLabel(acct.id) : v.title;
   const app = $('#app');
   app.innerHTML = '';
   try { v.fn(app); } catch (e) { console.error(e); app.appendChild(el('div', { class: 'card' }, `<b>Something went wrong rendering this screen.</b><div class="sub" style="margin-top:6px">${esc(e.message)}</div>`)); }
@@ -1990,6 +2366,8 @@ async function startApp() {
   if (VIEWS[v]) S.view = v;
   render();
   startRealtime();
+  /* one-time: find out whose phone this is, so changes can be attributed */
+  if (!who()) setTimeout(() => { if (!sheetOpen) deviceSheet(true); }, 900);
   /* auto-roll leftovers into the current month once it turns over */
   try {
     const n = await applyRollovers(monthStart(today()));

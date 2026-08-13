@@ -5,7 +5,7 @@
      - Supabase traffic -> never touched
    The old version was cache-first for everything, which meant a new app.js
    sat unused until the second reload. */
-const CACHE = 'hbt-v1-2-0';
+const CACHE = 'hbt-v1-3-0';
 const SHELL = [
   './', './index.html', './app.js', './manual.html', './vendor/supabase.js',
   './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png'

@@ -178,6 +178,8 @@ hr{border:0;border-top:1px solid var(--line);margin:30px 0}
     <li><a href="#bills">Bills</a></li>
     <li><a href="#budget">Budget</a></li>
     <li><a href="#accounts">Accounts &amp; debt</a></li>
+    <li><a href="#register">Account history</a></li>
+    <li><a href="#transfers">Transfers</a></li>
     <li><a href="#income">Income</a></li>
     <li><a href="#goals">Savings goals</a></li>
     <li><a href="#funds">Sinking funds</a></li>
@@ -213,6 +215,9 @@ hr{border:0;border-top:1px solid var(--line);margin:30px 0}
 <p>One-time, about twenty minutes. Do it in this order — each step makes the next screen actually useful.</p>
 
 <ol class="steps">
+  <li><b>Say whose phone this is</b>
+    The app asks the first time it opens. Tap <span class="ui">Sean</span> or <span class="ui">Jessica</span>. That's what labels who made each change, so we can see when the other has already handled something.</li>
+
   <li><b>Fix the accounts</b>
     <span class="ui">Accounts</span> tab. Eight placeholders are waiting. Tap each one, give it the real name and today's balance. Delete any we don't have.
     <br><em>For credit cards and loans, type what we <strong>owe</strong> as a positive number</em> — the app knows those count against us. While you're in there, add the interest rate and monthly payment if you know them; that's what produces the payoff estimates.</li>
@@ -268,7 +273,7 @@ hr{border:0;border-top:1px solid var(--line);margin:30px 0}
   <tr><td>🏠 Home</td><td>The dashboard — everything at a glance</td></tr>
   <tr><td>🧾 Bills</td><td>What's due, what's paid, and the master list</td></tr>
   <tr><td>📋 Budget</td><td>Planned vs. actual by category, plus this month's transactions</td></tr>
-  <tr><td>🏦 Accounts</td><td>Balances and debt payoff</td></tr>
+  <tr><td>🏦 Accounts</td><td>Balances, transfers and debt payoff — tap any account for its full history</td></tr>
   <tr><td>⋯ More</td><td>Everything else: income, goals, sinking funds, net worth, trends, weekly review, backup, settings</td></tr>
 </table>
 
@@ -287,8 +292,11 @@ hr{border:0;border-top:1px solid var(--line);margin:30px 0}
 <h4>Income</h4>
 <p>Same thing for money coming in — a side job, a sale, birthday money.</p>
 
-<h4>Pay bill</h4>
+<h4>Bill</h4>
 <p>A list of everything unpaid from the last 45 days and the next 30. <strong>Tap one and it's marked paid.</strong> That's it — no form.</p>
+
+<h4>Transfer</h4>
+<p>Move money between two of our own accounts in one entry. See <a href="#transfers">Transfers</a>.</p>
 
 <div class="warn">
   <span class="lab">Don't do both</span>
@@ -391,6 +399,82 @@ hr{border:0;border-top:1px solid var(--line);margin:30px 0}
 <h3>Account types</h3>
 <p>Checking, savings, cash, investment/retirement, and property/vehicle count as things we own. Credit card and loan count as things we owe. Property is for a house or a truck we own outright — pair it with the loan against it and net worth comes out right.</p>
 
+<h3>Two accounts with the same name</h3>
+<p>If two accounts share a name — a checking and a savings at the same credit union, say — the app adds the type so you can tell them apart: <em>TTFCU (Checking)</em> and <em>TTFCU (Savings)</em>. It only does this when there's an actual clash.</p>
+
+<!-- ============================================ -->
+<h2 id="register">Account history</h2>
+
+<p class="big">Tap any account to see everything that's happened to it.</p>
+
+<p>This is the fix for the two-of-us problem: you go to update the checking balance, and the history says <em>"Jessica updated 20 minutes ago."</em> So you don't do it again and end up with a number that's been adjusted twice.</p>
+
+<p>Each account's page shows the current balance, three buttons, and the full history underneath. The account list itself also shows who touched each one last, so you often don't even need to open it.</p>
+
+<h3>What's in the history</h3>
+<table>
+  <tr><td>✎ Balance updated</td><td>Someone typed a new balance — with the old and new figures</td></tr>
+  <tr><td>⇄ Transfer</td><td>Money moved to or from another account</td></tr>
+  <tr><td>🧾 Transaction</td><td>An expense or income logged with Quick Add</td></tr>
+  <tr><td>📅 Bill paid</td><td>A bill marked paid from this account</td></tr>
+  <tr><td>💵 Income</td><td>Money marked received into this account</td></tr>
+</table>
+
+<p>Every line shows the date and which of us did it.</p>
+
+<h3>The "doesn't match" box</h3>
+
+<p>Sometimes an orange box appears at the top saying logged activity doesn't match the balance. It's not an error. It's the difference between two honest numbers:</p>
+
+<ul>
+  <li><strong>The balance</strong> — what you last typed in from the bank</li>
+  <li><strong>What we've logged since</strong> — the groceries, the bills marked paid, the paycheck</li>
+</ul>
+
+<p>So if checking says $750 and we've logged $96 of groceries since the last update, the box points out it should be more like $654. Two possible reasons: the card hasn't cleared the bank yet, or the balance is stale.</p>
+
+<div class="tip">
+  <span class="lab">Why this is useful</span>
+  <p>It's the closest thing to a second opinion the app can give. When the gap is small or explainable, everything's fine. When it's big and surprising, something got logged twice or missed — and you've caught it early.</p>
+  <p>Tap <span class="ui">Update balance</span> once you've checked the bank. The gap resets to zero and starts tracking fresh from there.</p>
+</div>
+
+<h3>Naming your phone</h3>
+<p>The first time the app opens on a phone it asks which of us it belongs to. That's what puts the names in the history. It's stored on that phone only — no extra login, the shared password is unchanged. Change it later under <span class="ui">More</span> → <span class="ui">Settings</span> → <em>This phone</em>.</p>
+
+<!-- ============================================ -->
+<h2 id="transfers">Transfers</h2>
+
+<p class="big">Moving money between our own accounts — one entry instead of two.</p>
+
+<p>Before, moving $500 from checking to Robinhood meant subtracting $500 from one and adding $500 to the other, and hoping you didn't fat-finger one of them. Now it's one entry: from, to, amount.</p>
+
+<h3>Where to find it</h3>
+<ul>
+  <li><span class="ui">Accounts</span> tab → the green <span class="ui">⇄ Transfer between accounts</span> button at the top</li>
+  <li>The orange <strong>+</strong> button → <span class="ui">Transfer</span> tab</li>
+  <li>Any account's own page → <span class="ui">⇄ Transfer</span></li>
+</ul>
+
+<p>Before you confirm, it shows you both balances and what they'll become. Worth a two-second glance — it also warns you if a transfer would push an account below zero.</p>
+
+<h3>Paying a credit card or loan</h3>
+<p>Transfer <em>to</em> a credit card or loan and the app treats it as a payment: money leaves the account it came from, and the amount owed goes <strong>down</strong>. You don't type a minus sign anywhere.</p>
+
+<div class="note">
+  <span class="lab">Why a card payment isn't "spending"</span>
+  <p>Paying $500 toward a credit card doesn't count against any budget category, and that's deliberate. Whatever you bought on that card was already counted as spending when you bought it. Counting the payment too would count the same money twice.</p>
+  <p>Same reasoning for moving money into savings — you haven't spent it, you've just moved it. Your net worth doesn't budge on a transfer, which is the giveaway that no money actually left the household.</p>
+</div>
+
+<h3>What it won't let you do</h3>
+<ul>
+  <li>Transfer an account to itself</li>
+  <li>Transfer $0</li>
+  <li>Transfer without picking both accounts</li>
+</ul>
+<p>Each of those gets a plain message instead of silently doing something strange.</p>
+
 <!-- ============================================ -->
 <h2 id="income">Income</h2>
 
@@ -479,7 +563,8 @@ hr{border:0;border-top:1px solid var(--line);margin:30px 0}
 
 <ol class="steps">
   <li><b>Reconcile the balances</b>
-    Open the bank app and type in what each account actually says. This is the most important step in the whole app — everything else is built on these numbers being real. Hit <span class="ui">Save balances</span>.</li>
+    Open the bank app and type in what each account actually says. This is the most important step in the whole app — everything else is built on these numbers being real. Hit <span class="ui">Save balances</span>.
+    <br>Each line shows who updated it last and when, so if one of you did it this morning you can skip that account.</li>
   <li><b>Clear the week's bills</b>
     Anything overdue or due in the next 7 days. Tap <span class="ui">Pay</span> on what's been paid — including autopay ones.</li>
   <li><b>Confirm income</b>
@@ -508,6 +593,7 @@ hr{border:0;border-top:1px solid var(--line);margin:30px 0}
 
 <h3>Settings</h3>
 <ul>
+  <li><strong>This phone</strong> — whose phone this is, used to label changes in account history. Stored on the phone, not shared.</li>
   <li><strong>Change household password</strong> — needs the current one first. Whoever changes it has to tell the other, or they're locked out.</li>
   <li><strong>Toggle light / dark</strong> — same as the <span class="ui">◐</span> button up top. Set per phone.</li>
   <li><strong>Sign out on this device</strong> — only that phone. Everything stays put.</li>
@@ -520,6 +606,8 @@ hr{border:0;border-top:1px solid var(--line);margin:30px 0}
   <li><strong>Mark bills paid, log everything else as an expense.</strong> Never both for the same purchase — it double-counts.</li>
   <li><strong>Debts go in as positive numbers.</strong> $4,800 owed is <code>4800</code>.</li>
   <li><strong>Sinking funds are labels, not accounts.</strong> The money is already in savings; don't subtract it twice.</li>
+  <li><strong>Use Transfer for money moving between our accounts.</strong> Don't log an expense on one side and income on the other — that's not spending, and it would wreck the budget.</li>
+  <li><strong>Check the account history before updating a balance.</strong> If it says the other one of us just did it, it's done.</li>
   <li><strong>Reconcile weekly.</strong> Typed balances drift from real ones faster than you'd think.</li>
   <li><strong>Green dot before you type.</strong> Red means offline and it may not save.</li>
   <li><strong>Retire, don't delete.</strong> Retiring a category keeps last year's numbers true.</li>
@@ -535,6 +623,9 @@ hr{border:0;border-top:1px solid var(--line);margin:30px 0}
   <tr><td>Bill won't go away</td><td>Marking it paid clears that month only — it comes back next month by design. To stop it for good, tap its name and delete it.</td></tr>
   <tr><td>Net worth chart is blank</td><td>Fewer than two snapshots. Take another in the weekly review.</td></tr>
   <tr><td>The two phones disagree</td><td>Close and reopen the app on both. It reloads everything fresh.</td></tr>
+  <tr><td>A balance looks doubly adjusted</td><td>Both of us probably updated it. Open that account's history — it shows who set what and when. Just type the correct figure; the history keeps the record either way.</td></tr>
+  <tr><td>Orange "doesn't match" box</td><td>Not an error. Logged spending hasn't cleared the bank yet, or the balance is stale. See <a href="#register">Account history</a>.</td></tr>
+  <tr><td>A transfer went the wrong way</td><td>Do a transfer back the other way for the same amount. Both entries stay in the history, which is the honest record of what happened.</td></tr>
   <tr><td>Trends look wrong for this month</td><td>The current month is partial. Compare finished months.</td></tr>
   <tr><td>Payoff date says "never"</td><td>The monthly payment doesn't cover the interest. Not a glitch — that's the actual situation.</td></tr>
   <tr><td>An update didn't show up</td><td>Close the app fully on each phone and reopen. It caches itself to work fast.</td></tr>
