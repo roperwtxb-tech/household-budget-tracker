@@ -7,7 +7,7 @@
    the cache name, so a new version can never be served from a stale cache —
    GitHub Pages sits behind a CDN that holds files for several minutes, and a
    changed URL is the only thing that reliably gets past it. */
-const APP_VERSION = '1.3.1';
+const APP_VERSION = '1.4.0';
 
 const CFG = {
   url: 'https://hrtuhexblsbdjfdbfblg.supabase.co',
@@ -294,14 +294,19 @@ function reindexPayments() {
 }
 const getPayment = (billId, cycle) => payIndex.get(payKey(billId, cycle));
 
-/** all bill instances in a window, with paid state */
+/** status of one bill occurrence: 'unpaid' | 'paid' | 'skipped' */
+const payStatus = p => (p ? (p.status || (p.paid ? 'paid' : 'unpaid')) : 'unpaid');
+
+/** all bill instances in a window, with their state */
 function billInstances(from, to) {
   const out = [];
   D.bills.filter(b => !b.archived).forEach(b => {
     occurrences(b, from, to).forEach(c => {
       const p = getPayment(b.id, c);
+      const status = payStatus(p);
       out.push({
-        bill: b, cycle: c, paid: !!(p && p.paid), payment: p,
+        bill: b, cycle: c, payment: p, status,
+        paid: status === 'paid', skipped: status === 'skipped', open: status === 'unpaid',
         amount: p && p.paid_amount != null ? num(p.paid_amount) : num(b.amount)
       });
     });
@@ -309,21 +314,42 @@ function billInstances(from, to) {
   return out.sort((a, b) => a.cycle.localeCompare(b.cycle) || a.bill.name.localeCompare(b.bill.name));
 }
 
-async function setBillPaid(bill, cycle, paid, fromAccountId, amount) {
+/**
+ * Set what happened to one occurrence.
+ *  status 'paid'    — counts toward the budget; only hits an account's history
+ *                     if fromAccountId is given (pass null for "not tracked")
+ *  status 'skipped' — counts nowhere: no budget, no account
+ *  status 'unpaid'  — back to owing it
+ */
+async function setBillStatus(bill, cycle, status, opts = {}) {
   const existing = getPayment(bill.id, cycle);
+  const paid = status === 'paid';
   const row = {
     id: existing ? existing.id : undefined,
-    bill_id: bill.id, cycle_date: cycle, paid,
-    paid_date: paid ? iso(today()) : null,
-    paid_amount: paid ? num(amount != null ? amount : bill.amount) : null,
-    paid_from_account_id: paid ? (fromAccountId || bill.account_id || null) : null
+    bill_id: bill.id, cycle_date: cycle,
+    status, paid,
+    paid_date: status === 'unpaid' ? null : iso(today()),
+    paid_amount: paid ? num(opts.amount != null ? opts.amount : bill.amount) : null,
+    paid_from_account_id: paid ? (opts.accountId || null) : null,
+    note: opts.note || null
   };
   if (!row.id) delete row.id;
-  const rec = await save('bill_payments', row, { silent: true, });
+  const rec = await save('bill_payments', row, { silent: true });
   reindexPayments();
-  toast(paid ? `Marked paid — ${bill.name}` : `Marked unpaid — ${bill.name}`);
+  if (!opts.silent) {
+    toast(status === 'paid' ? `Marked paid — ${bill.name}`
+      : status === 'skipped' ? `Skipped — ${bill.name}`
+        : `Back to unpaid — ${bill.name}`);
+  }
   return rec;
 }
+
+/* the one-tap path: pay it from whatever account the bill is set to */
+const setBillPaid = (bill, cycle, paid, fromAccountId, amount) =>
+  setBillStatus(bill, cycle, paid ? 'paid' : 'unpaid', {
+    accountId: fromAccountId !== undefined ? fromAccountId : bill.account_id,
+    amount
+  });
 
 /* =====================================================================
    Budget math
@@ -346,7 +372,7 @@ function actualFor(catId, m) {
     const d = parseD(t.date); if (d >= a && d <= b) sum += num(t.amount);
   });
   D.bill_payments.forEach(p => {
-    if (!p.paid) return;
+    if (payStatus(p) !== 'paid') return;          // skipped bills cost nothing
     const bill = D.bills.find(x => x.id === p.bill_id);
     if (!bill || bill.category_id !== catId) return;
     const d = parseD(p.paid_date || p.cycle_date); if (d >= a && d <= b) sum += num(p.paid_amount != null ? p.paid_amount : bill.amount);
@@ -495,7 +521,7 @@ function accountRegister(accountId) {
     who: t.device_name, applied: false
   }));
 
-  D.bill_payments.filter(p => p.paid && p.paid_from_account_id === accountId).forEach(p => {
+  D.bill_payments.filter(p => payStatus(p) === 'paid' && p.paid_from_account_id === accountId).forEach(p => {
     const bill = D.bills.find(b => b.id === p.bill_id);
     push({
       ts: p.created_at || p.paid_date, date: p.paid_date || p.cycle_date, type: 'bill',
@@ -927,6 +953,77 @@ function editBill(bl) {
   ]);
 }
 
+/** What happened to this bill this cycle — paid, skipped, or still owed. */
+function billOccurrenceSheet(x) {
+  const bill = x.bill, cycle = x.cycle;
+  let mode = x.status === 'unpaid' ? 'paid' : x.status;   // default action for an open bill
+  openSheet(bill.name, b => {
+    b.appendChild(el('div', { class: 'sub', style: 'margin:-2px 0 8px' },
+      `${fmtD(cycle, { weekday: 'short', month: 'long', day: 'numeric' })} · ${money(bill.amount)} · ${esc(catName(bill.category_id))}`));
+
+    if (x.status !== 'unpaid') {
+      const cur = el('div', { class: 'card', style: 'margin:0 0 12px;padding:12px' });
+      const p = x.payment || {};
+      cur.innerHTML = `<div style="font-weight:620;margin-bottom:4px">
+          ${x.status === 'paid' ? '✓ Marked paid' : '⤼ Skipped this cycle'}</div>
+        <div class="sub">${x.status === 'paid'
+          ? `${money(x.amount)}${p.paid_from_account_id ? ' from ' + esc(acctLabel(p.paid_from_account_id)) : ' · not tracked to an account'}`
+          : 'No payment recorded — counts nowhere'}${p.note ? ' · ' + esc(p.note) : ''}${p.device_name ? ' · ' + esc(p.device_name) : ''}</div>`;
+      const undo = el('button', { class: 'btn sm wide ghost', style: 'margin-top:10px' }, 'Undo — back to unpaid');
+      undo.onclick = async () => { closeSheet(); await setBillStatus(bill, cycle, 'unpaid'); render(); };
+      cur.appendChild(undo);
+      b.appendChild(cur);
+    }
+
+    const seg = el('div', { class: 'seg', style: 'margin-bottom:6px' });
+    const panel = el('div', {});
+    const draw = () => {
+      $$('button', seg).forEach(n => n.setAttribute('aria-selected', String(n.dataset.m === mode)));
+      panel.innerHTML = '';
+      const act = $('#boSubmit');
+      if (act) act.textContent = mode === 'paid' ? 'Mark paid' : 'Skip this cycle';
+
+      if (mode === 'paid') {
+        const amt = field(panel, 'Amount paid', money_(x.amount));
+        const acc = field(panel, 'Paid from',
+          sel([{ v: '', l: '— not tracked to an account —' }].concat(accts().map(a => ({ v: a.id, l: acctLabel(a.id) }))),
+            (x.payment && x.payment.paid_from_account_id) || bill.account_id || ''));
+        panel.appendChild(el('div', { class: 'sub', style: 'margin-top:6px' },
+          'Leave the account blank and it still counts toward the budget, but won\'t appear in any account\'s history or affect its expected balance.'));
+        const note = field(panel, 'Note (optional)', inp('text', (x.payment && x.payment.note) || '', { placeholder: 'e.g. paid in cash' }));
+        panel._get = () => ({ status: 'paid', amount: num(amt.value), accountId: acc.value || null, note: note.value.trim() });
+      } else {
+        panel.appendChild(el('div', { class: 'sub', style: 'margin:2px 0 4px' },
+          'Clears it off the list for this cycle only — it comes back next cycle as normal. Counts nowhere: no budget, no account, no history on any balance.'));
+        const note = field(panel, 'Why? (optional)', inp('text', (x.payment && x.payment.note) || '',
+          { placeholder: 'e.g. credit this month, or already handled' }));
+        panel._get = () => ({ status: 'skipped', note: note.value.trim() });
+      }
+    };
+    [['paid', 'Paid'], ['skipped', 'Skip']].forEach(([m, l]) => {
+      const btn = el('button', { 'data-m': m }, l);
+      btn.onclick = () => { mode = m; draw(); };
+      seg.appendChild(btn);
+    });
+    b.append(seg, panel);
+    b._get = () => panel._get();
+    draw();
+
+    const ed = el('button', { class: 'btn sm wide ghost', style: 'margin-top:16px' }, 'Edit the bill itself');
+    ed.onclick = () => { closeSheet(); setTimeout(() => editBill(bill), 280); };
+    b.appendChild(ed);
+  }, [
+    { label: 'Cancel', cls: 'ghost', onClick: closeSheet },
+    {
+      label: 'Mark paid', cls: 'pri', id: 'boSubmit', onClick: async () => {
+        const v = sheetGet(); closeSheet();
+        await setBillStatus(bill, cycle, v.status, v);
+        render();
+      }
+    }
+  ]);
+}
+
 function editIncome(i) {
   const isNew = !i;
   i = i || { source: '', amount: 0, date: iso(today()), recurrence: 'once', received: false };
@@ -1087,7 +1184,7 @@ function quickAdd() {
 
   function drawBillPay(panel) {
     const from = addDays(today(), -45), to = addDays(today(), 30);
-    const list = billInstances(from, to).filter(x => !x.paid);
+    const list = billInstances(from, to).filter(x => x.open);
     if (!list.length) { panel.appendChild(el('div', { class: 'empty' }, 'No unpaid bills in the last 45 / next 30 days.')); panel._get = () => null; return; }
     list.slice(0, 40).forEach(x => {
       const overdue = parseD(x.cycle) < today();
@@ -1139,25 +1236,36 @@ function monthNav(onChange) {
 }
 
 function billRow(x, opts = {}) {
-  const overdue = !x.paid && parseD(x.cycle) < today();
-  const soon = !x.paid && !overdue && daysBetween(today(), parseD(x.cycle)) <= 7;
+  const overdue = x.open && parseD(x.cycle) < today();
+  const soon = x.open && !overdue && daysBetween(today(), parseD(x.cycle)) <= 7;
   const row = el('div', { class: 'row' });
   const left = el('button', { class: 'rowbtn', style: 'flex:1' });
+  const paidFrom = x.paid && x.payment && x.payment.paid_from_account_id
+    ? ' · ' + esc(acctLabel(x.payment.paid_from_account_id))
+    : (x.paid ? ' · not tracked' : (x.bill.account_id ? ' · ' + esc(acctLabel(x.bill.account_id)) : ''));
   left.innerHTML = `<div class="main">
-      <div class="t">${esc(x.bill.name)} ${x.bill.autopay ? '<span class="badge b-mut">auto</span>' : ''}</div>
-      <div class="s">${fmtD(x.cycle, { month: 'short', day: 'numeric' })} · ${esc(catName(x.bill.category_id))}${x.bill.account_id ? ' · ' + esc(acctName(x.bill.account_id)) : ''}</div>
+      <div class="t"${x.skipped ? ' style="opacity:.6"' : ''}>${esc(x.bill.name)} ${x.bill.autopay ? '<span class="badge b-mut">auto</span>' : ''}</div>
+      <div class="s">${fmtD(x.cycle, { month: 'short', day: 'numeric' })} · ${esc(catName(x.bill.category_id))}${x.skipped ? '' : paidFrom}</div>
     </div>
-    <div class="amt">${money(x.amount)}</div>`;
-  left.onclick = () => editBill(x.bill);
+    <div class="amt"${x.skipped ? ' style="opacity:.5;text-decoration:line-through"' : ''}>${money(x.amount)}</div>`;
+  left.onclick = () => billOccurrenceSheet(x);
   row.appendChild(left);
 
-  const badge = el('span', { class: 'badge ' + (x.paid ? 'b-ok' : overdue ? 'b-over' : soon ? 'b-soon' : 'b-mut') },
-    x.paid ? '✓ Paid' : overdue ? 'Overdue' : soon ? relDue(x.cycle).replace('Due in ', 'in ') : 'Upcoming');
+  const badge = el('span', {
+    class: 'badge ' + (x.paid ? 'b-ok' : x.skipped ? 'b-mut' : overdue ? 'b-over' : soon ? 'b-soon' : 'b-mut')
+  }, x.paid ? '✓ Paid' : x.skipped ? '⤼ Skipped'
+    : overdue ? 'Overdue' : soon ? relDue(x.cycle).replace('Due in ', 'in ') : 'Upcoming');
   row.appendChild(badge);
 
-  const tog = el('button', { class: 'btn sm ' + (x.paid ? 'ghost' : 'olive'), style: 'margin-left:4px' }, x.paid ? 'Undo' : 'Pay');
-  tog.onclick = async e => { e.stopPropagation(); await setBillPaid(x.bill, x.cycle, !x.paid); };
-  row.appendChild(tog);
+  if (x.open) {
+    const tog = el('button', { class: 'btn sm olive', style: 'margin-left:4px' }, 'Pay');
+    tog.onclick = async e => { e.stopPropagation(); await setBillPaid(x.bill, x.cycle, true); };
+    row.appendChild(tog);
+  } else {
+    const tog = el('button', { class: 'btn sm ghost', style: 'margin-left:4px' }, 'Undo');
+    tog.onclick = async e => { e.stopPropagation(); await setBillStatus(x.bill, x.cycle, 'unpaid'); render(); };
+    row.appendChild(tog);
+  }
   return row;
 }
 
@@ -1214,8 +1322,8 @@ function viewDashboard(app) {
   const nw = netWorthNow();
   const mt = monthTotals(S.month);
   const win = billInstances(addDays(today(), -60), addDays(today(), 14));
-  const overdue = win.filter(x => !x.paid && parseD(x.cycle) < today());
-  const upcoming = win.filter(x => !x.paid && parseD(x.cycle) >= today());
+  const overdue = win.filter(x => x.open && parseD(x.cycle) < today());
+  const upcoming = win.filter(x => x.open && parseD(x.cycle) >= today());
 
   /* tiles */
   const tiles = el('div', { class: 'tiles' });
@@ -1372,13 +1480,16 @@ function viewBills(app) {
   const from = monthStart(S.month), to = monthEnd(S.month);
   const list = billInstances(from, to);
   const paid = list.filter(x => x.paid);
-  const unpaid = list.filter(x => !x.paid);
+  const skipped = list.filter(x => x.skipped);
+  const unpaid = list.filter(x => x.open);
 
   const sum = el('div', { class: 'tiles' });
   const a = el('div', { class: 'tile' });
-  a.innerHTML = `<div class="lab">Due this month</div><div class="val tnum">${money0(list.reduce((s, x) => s + x.amount, 0))}</div><div class="note">${list.length} bills</div>`;
+  const owed = list.filter(x => !x.skipped);   // skipped bills aren't owed
+  a.innerHTML = `<div class="lab">Due this month</div><div class="val tnum">${money0(owed.reduce((s, x) => s + x.amount, 0))}</div>
+    <div class="note">${owed.length} bills${skipped.length ? ` · ${skipped.length} skipped` : ''}</div>`;
   const b = el('div', { class: 'tile' });
-  b.innerHTML = `<div class="lab">Still to pay</div><div class="val tnum ${unpaid.length ? 'neg' : 'pos'}">${money0(unpaid.reduce((s, x) => s + x.amount, 0))}</div><div class="note">${paid.length} of ${list.length} paid</div>`;
+  b.innerHTML = `<div class="lab">Still to pay</div><div class="val tnum ${unpaid.length ? 'neg' : 'pos'}">${money0(unpaid.reduce((s, x) => s + x.amount, 0))}</div><div class="note">${paid.length} of ${owed.length} paid</div>`;
   sum.append(a, b);
   app.appendChild(sum);
 
@@ -1387,6 +1498,7 @@ function viewBills(app) {
   else {
     if (unpaid.length) { c.appendChild(el('div', { class: 'sub', style: 'font-weight:640;margin:2px 0' }, 'Unpaid')); unpaid.forEach(x => c.appendChild(billRow(x))); }
     if (paid.length) { c.appendChild(el('div', { class: 'sub', style: 'font-weight:640;margin:12px 0 2px' }, 'Paid')); paid.forEach(x => c.appendChild(billRow(x))); }
+    if (skipped.length) { c.appendChild(el('div', { class: 'sub', style: 'font-weight:640;margin:12px 0 2px' }, 'Skipped')); skipped.forEach(x => c.appendChild(billRow(x))); }
   }
   app.appendChild(c);
 
@@ -1888,7 +2000,7 @@ function spendingByMonth(nMonths) {
       grid.get(k)[i] += num(t.amount); totals.set(k, totals.get(k) + num(t.amount));
     });
     D.bill_payments.forEach(p => {
-      if (!p.paid) return;
+      if (payStatus(p) !== 'paid') return;
       const bill = D.bills.find(x => x.id === p.bill_id); if (!bill) return;
       const d = parseD(p.paid_date || p.cycle_date); if (d < a || d > z) return;
       const amt = num(p.paid_amount != null ? p.paid_amount : bill.amount);
@@ -2038,7 +2150,7 @@ function viewReview(app) {
 
   /* 2. bills */
   const win = billInstances(addDays(today(), -60), addDays(today(), 7));
-  const open = win.filter(x => !x.paid);
+  const open = win.filter(x => x.open);
   const s2 = step(2, 'Clear this week\'s bills', 'Anything overdue or due in the next 7 days.');
   if (!open.length) s2.appendChild(emptyNote('All caught up — nothing outstanding.'));
   else open.forEach(x => s2.appendChild(billRow(x)));

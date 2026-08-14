@@ -331,11 +331,45 @@ hr{border:0;border-top:1px solid var(--line);margin:30px 0}
 
 <p>Marking it paid applies to <strong>that month only</strong>. Next month it comes back unpaid, as it should. Options are one-time, weekly, every 2 weeks, twice a month, monthly, quarterly, every 6 months, and yearly.</p>
 
-<h3>Paying one</h3>
-<p>Tap the green <span class="ui">Pay</span> button on that row. Marked the wrong one? <span class="ui">Undo</span> puts it back.</p>
+<h3>Paying one — the fast way</h3>
+<p>Tap the green <span class="ui">Pay</span> button on that row. It records the full amount from whichever account the bill is set to. Marked the wrong one? <span class="ui">Undo</span> puts it back.</p>
 
-<h3>Editing a bill</h3>
-<p>Tap the bill's <em>name</em> (not the Pay button). Changing the amount here changes it for all future months.</p>
+<h3>Paying one — with the details</h3>
+<p>Tap the bill's <em>name</em> instead and you get the options for that month:</p>
+<ul>
+  <li><strong>Amount paid</strong> — defaults to the usual amount, but change it if you paid more or less</li>
+  <li><strong>Paid from</strong> — which account, <em>or leave it blank</em> (see below)</li>
+  <li><strong>Note</strong> — anything worth remembering</li>
+  <li><strong>Skip</strong> — the other tab; see below</li>
+  <li><strong>Edit the bill itself</strong> — to change the amount or schedule for every month</li>
+</ul>
+
+<h3>Paid, but don't touch my account</h3>
+<p>Set <strong>Paid from</strong> to <em>"— not tracked to an account —"</em>.</p>
+<p>The bill counts as paid and counts toward its budget category, but it won't appear in any account's history and won't shift that account's expected balance. Use it when the bill was genuinely paid but you'd rather not sort out which account it came from — cash, someone else covered it, or it came out of somewhere you don't track here.</p>
+
+<h3>Skipping a bill</h3>
+
+<p class="big">Skip means no money moved. It counts nowhere.</p>
+
+<p>The <span class="ui">Skip</span> tab clears the bill off the list for that month only. It comes back next month exactly as normal. A skipped bill:</p>
+<ul>
+  <li>doesn't count toward its budget category</li>
+  <li>doesn't appear in any account's history</li>
+  <li>doesn't affect any expected balance</li>
+  <li>doesn't show in spending trends</li>
+  <li>isn't listed as owed, overdue, or outstanding in the weekly review</li>
+</ul>
+
+<p>Use it for a credit month, a bill that got waived, a service you paused — anything where the bill simply isn't owed this cycle. There's a note field for why, which is worth filling in; in four months you won't remember.</p>
+
+<div class="note">
+  <span class="lab">Skip vs. paid-without-an-account</span>
+  <p>Easy to mix up, so: <strong>Skip = you didn't pay it.</strong> <strong>Paid with no account = you did pay it, you're just not saying from where.</strong></p>
+  <p>The difference is the budget. A skipped bill spent nothing, so the category stays clean. An untracked payment did spend money, so it counts — it just doesn't pin the money to an account.</p>
+</div>
+
+<p>Skipped bills show greyed out with the amount struck through, in their own section at the bottom of the month. <span class="ui">Undo</span> puts one back to unpaid.</p>
 
 <h3>Reading the tags</h3>
 <table>
@@ -343,6 +377,7 @@ hr{border:0;border-top:1px solid var(--line);margin:30px 0}
   <tr><td>🟡 in 3 days</td><td>Due within a week</td></tr>
   <tr><td>⚪ Upcoming</td><td>Due later this month</td></tr>
   <tr><td>🟢 ✓ Paid</td><td>Done for this cycle</td></tr>
+  <tr><td>⤼ Skipped</td><td>Not owed this cycle — counts nowhere</td></tr>
   <tr><td><span class="ui">auto</span></td><td>Marked autopay — still needs marking paid so the budget sees it</td></tr>
 </table>
 
@@ -574,7 +609,7 @@ hr{border:0;border-top:1px solid var(--line);margin:30px 0}
     Open the bank app and type in what each account actually says. This is the most important step in the whole app — everything else is built on these numbers being real. Hit <span class="ui">Save balances</span>.
     <br>Each line shows who updated it last and when, so if one of you did it this morning you can skip that account.</li>
   <li><b>Clear the week's bills</b>
-    Anything overdue or due in the next 7 days. Tap <span class="ui">Pay</span> on what's been paid — including autopay ones.</li>
+    Anything overdue or due in the next 7 days. Tap <span class="ui">Pay</span> on what's been paid — including autopay ones. Anything not actually owed this cycle, tap its name and <span class="ui">Skip</span> it.</li>
   <li><b>Confirm income</b>
     Paychecks that landed get marked <span class="ui">Received</span>.</li>
   <li><b>Fund the sinking funds</b>
@@ -613,6 +648,7 @@ hr{border:0;border-top:1px solid var(--line);margin:30px 0}
 
 <ol>
   <li><strong>Mark bills paid, log everything else as an expense.</strong> Never both for the same purchase — it double-counts.</li>
+  <li><strong>Skip means you didn't pay it.</strong> If you did pay it but don't want it hitting an account, mark it paid and leave the account blank instead.</li>
   <li><strong>Debts go in as positive numbers.</strong> $4,800 owed is <code>4800</code>.</li>
   <li><strong>Sinking funds are labels, not accounts.</strong> The money is already in savings; don't subtract it twice.</li>
   <li><strong>Use Transfer for money moving between our accounts.</strong> Don't log an expense on one side and income on the other — that's not spending, and it would wreck the budget.</li>
@@ -629,7 +665,8 @@ hr{border:0;border-top:1px solid var(--line);margin:30px 0}
   <tr><th>What you see</th><th>What's going on</th></tr>
   <tr><td>Red dot / "Offline"</td><td>No connection. Get back on wifi or signal; it reconnects itself. Don't type anything important until it's green.</td></tr>
   <tr><td>Category looks overspent</td><td>Usually a bill marked paid <em>and</em> logged as an expense. Check <span class="ui">Budget</span> → transactions for a duplicate and delete one.</td></tr>
-  <tr><td>Bill won't go away</td><td>Marking it paid clears that month only — it comes back next month by design. To stop it for good, tap its name and delete it.</td></tr>
+  <tr><td>Bill won't go away</td><td>Marking it paid clears that month only — it comes back next month by design. To stop it for good, tap its name → <span class="ui">Edit the bill itself</span> → delete.</td></tr>
+  <tr><td>A paid bill moved an account you didn't want touched</td><td>Tap the bill → set <strong>Paid from</strong> to <em>not tracked</em> → Mark paid again. It stays paid; it just stops counting against that account.</td></tr>
   <tr><td>Net worth chart is blank</td><td>Fewer than two snapshots. Take another in the weekly review.</td></tr>
   <tr><td>The two phones disagree</td><td>Close and reopen the app on both. It reloads everything fresh.</td></tr>
   <tr><td>A balance looks doubly adjusted</td><td>Both of us probably updated it. Open that account's history — it shows who set what and when. Just type the correct figure; the history keeps the record either way.</td></tr>
